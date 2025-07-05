@@ -12,6 +12,7 @@ import ThumbUpOutlinedIcon from '@mui/icons-material/ThumbUpOutlined';
 import ThumbUpIcon from '@mui/icons-material/ThumbUp';
 import CommentIcon from '@mui/icons-material/Comment';
 import { ChevronRight, ChevronLeft } from 'lucide-react';
+import Link from "next/link";
 
 const Posts = ({ users, OpenCommentSection, Feed, likedMap, fromProfile, onShowError }) => {
     const [feeds, getFeed] = useState([]);
@@ -133,10 +134,20 @@ const Posts = ({ users, OpenCommentSection, Feed, likedMap, fromProfile, onShowE
 
                                 <div className="flex flex-col">
                                     <p className="text-black text-xl font-bold">
-                                        {fromProfile
-                                            ? users?.name || "Unknown User"
-                                            : users?.data?.[feed.postId?.toString()]?.name || "Unknown User"}
+                                        {fromProfile ? (
+                                            users?.name || "Unknown User"
+                                        ) : (
+                                            users?.data?.[feed.postId?.toString()]?._id ? (
+                                                <Link href={`/components/UserProfile?user=${users.data[feed.postId?.toString()]._id}`}>
+                                                    {users.data[feed.postId?.toString()]?.name || "Unknown User"}
+                                                </Link>
+                                            ) : (
+                                                "Unknown User"
+                                            )
+                                        )}
                                     </p>
+
+
                                     <p className="text-black">
                                         {fromProfile
                                             ? users?.institute || ""

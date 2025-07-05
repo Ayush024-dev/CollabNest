@@ -305,21 +305,24 @@ const isloggedin = AsyncHandler(async (req, res) => {
     }
 })
 
-const alluserInfo= AsyncHandler(async(req,res)=>{
+const alluserInfo = AsyncHandler(async (req, res) => {
     try {
-       const data=await User.find().select("_id name avatar institute");
-       let JsonData={};
-       
-       data.forEach(element => {
-        JsonData[element._id]=element
-       });
-
-       return res.status(200).send(JsonData);
+      const data = await User.find().select("_id name avatar institute");
+      let JsonData = {};
+  
+      data.forEach(element => {
+        JsonData[element._id] = {
+          ...element.toObject(),
+          _id: encrypt(element._id.toString())  // Encrypt only the value part's _id
+        };
+      });
+  
+      return res.status(200).send(JsonData);
     } catch (error) {
-        console.error(error);
-        throw new ApiError(500, error?.message || "Cannot get info")
+      console.error(error);
+      throw new ApiError(500, error?.message || "Cannot get info");
     }
-})
+  });
 
 
 const getUserPosts = AsyncHandler(async (req, res) => {
