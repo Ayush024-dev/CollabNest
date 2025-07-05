@@ -1,0 +1,289 @@
+"use client"
+import { useState, useEffect } from 'react'
+import CommentSection from '../comments/page';
+import NavBar from '../nav/page';
+import Image from 'next/image';
+import axios from 'axios';
+import { Button } from '@/components/ui/button';
+import LogoutIcon from '@mui/icons-material/Logout';
+import CheckBoxIcon from "@mui/icons-material/CheckBox";
+import ErrorIcon from "@mui/icons-material/Error";
+import CancelIcon from '@mui/icons-material/Cancel';
+import { Alert } from "@mui/material";
+import Posts from '../Posts/page';
+import { useRouter } from 'next/navigation';
+
+const ProfilePage = () => {
+  const [user, getUser] = useState({});
+  const [feeds, getFeed] = useState([]);
+  const [liked, setLiked] = useState(new Map());
+  const [userid, setUserid] = useState("");
+  const [loggedIn, setLoggedIn] = useState(false);
+  const [msg, setMsg] = useState("");
+  const [error, setError] = useState("");
+  const [postId, setpostId] = useState("");
+  const [comment, getComment] = useState(false);
+  const [blur, setblur] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  const router = useRouter();
+
+  const getUserFeeds = async ({ userId }) => {
+    try {
+      setLoading(true);
+      setError("");
+      console.log(userId)
+      const response = await axios.post("http://localhost:8080/api/v1/posts/view_content", { encryptedId: userId }, {
+        withCredentials: true,
+      });
+      const data = response?.data?.data;
+      console.log(data)
+      getUser(data.user);
+      setLoggedIn(data.isLoggedInUser);
+      getFeed(data.posts);
+      setLiked(new Map(Object.entries(data.initialLikes)));
+    } catch (error) {
+      console.log(error);
+      // Properly extract error message from axios error response
+      const errorMessage = error.response?.data?.message || error.message || "Could not show feeds";
+      setError(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    console.log("are you working? ")
+    const initialize = async () => {
+      setLoading(true);
+      
+      const params = new URLSearchParams(window.location.search);
+      const encryptedId = params.get("user");
+  
+      if (encryptedId) {
+        try {
+          // Handle URL encoding properly
+          const decodedId = decodeURIComponent(encryptedId).replace(/ /g, '+');
+          setUserid(decodedId);
+          console.log("✅ Final userId sent:", decodedId);
+          await getUserFeeds({ userId: decodedId });
+        } catch (error) {
+          console.error("Error decoding user ID:", error);
+          setError("Invalid user profile link");
+          setLoading(false);
+        }
+      } else {
+        setError("No user ID provided");
+        setLoading(false);
+      }
+    };
+    initialize();
+  }, []);
+  
+  
+
+  const handleShowAlert = (message) => {
+    setMsg(message);
+    setTimeout(() => setMsg(""), 2000);
+  };
+
+  const handleErrorAlert = (message) => {
+    setError(message);
+    setTimeout(() => setError(""), 2000);
+  };
+
+  const OpenCommentSection = (postId) => {
+    setpostId(postId);
+    getComment(true);
+    setblur(true);
+  }
+
+  const closeCommentSection = () => {
+    getComment(false);
+    setblur(false);
+  }
+
+  const logout = async () => {
+    try {
+      await axios.post('http://localhost:8080/api/v1/users/logOut', {}, { withCredentials: true });
+      console.log("logout successfull");
+
+      alert("logout successfull");
+
+      setTimeout(() => {
+        router.push('/')
+      }, 2000);
+    } catch (error) {
+      console.log(error.response.data);
+      alert("not able to logout");
+    }
+  }
+
+  return (
+    <div className='min-h-screen w-full flex flex-col bg-slate-600 relative'>
+      {console.log(user)}
+      
+      {/* Loading State */}
+      {loading && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-slate-600 bg-opacity-50">
+          <div className="text-white text-xl">Loading profile...</div>
+        </div>
+      )}
+      
+      {/* Success Alert */}
+      {msg && (
+        <div className="absolute z-50 top-4 right-4">
+          <Alert icon={<CheckBoxIcon fontSize="inherit" />} severity="success">
+            {msg}
+          </Alert>
+        </div>
+      )}
+      
+      {/* Error Alert */}
+      {error && (
+        <div className="absolute z-50 top-4 right-4">
+          <Alert icon={<ErrorIcon fontSize="inherit" />} severity="error">
+            {error}
+          </Alert>
+        </div>
+      )}
+
+      {/* Close Comment Button */}
+      {comment && (
+        <button
+          className="h-11 w-11 absolute top-11 right-4 cursor-pointer z-50"
+          title="my_close_btn"
+          type="button"
+          onClick={closeCommentSection}
+        >
+          <CancelIcon htmlColor='yellow' />
+        </button>
+      )}
+
+      {/* Comment Section Overlay */}
+      {comment && user && Object.keys(user).length > 0 && (
+        <div className="CS absolute inset-0 z-40 flex justify-center items-center">
+          <CommentSection postId={postId} userId={userid} onShowMsg={handleShowAlert} onShowError={handleErrorAlert} users={user} />
+        </div>
+      )}
+
+      {/* Navigation Bar */}
+      <div className={`sticky top-0 z-20 ${blur ? "blur-md" : ""} bg-background`}>
+        <NavBar profileLink={userid} />
+      </div>
+
+      {/* Main Layout Container */}
+      <div className={`flex-1 relative ${blur ? "blur-md" : ""}`}>
+        
+        {/* Left Sidebar - Fixed Position */}
+        <div className="fixed left-4 bottom-8 z-30">
+          <Button onClick={logout} variant='ghost' className="relative flex items-center justify-center p-0 hover:bg-transparent">
+            {/* Yellow Profile Image as Base */}
+            <Image src="/assets/img/profile.svg" width={66} height={69} alt='profile' className="relative" />
+            {/* Logout Icon Positioned Over the Image */}
+            <LogoutIcon 
+              style={{ 
+                width: "32px", 
+                height: "32px",
+                position: "absolute",
+                top: "50%",
+                left: "50%",
+                transform: "translate(-50%, -50%)",
+                color: "#000000",
+                zIndex: 10
+              }} 
+            />
+          </Button>
+        </div>
+
+        {/* Centered Main Content */}
+        <div className="flex justify-center px-4 py-6">
+          <div className="w-full max-w-4xl">
+            
+            {/* Profile Header Card */}
+            <div className='h-72 rounded-lg bg-lightBlue flex shadow-2xl mb-6 overflow-hidden'>
+              
+              {/* Avatar and Info Section */}
+              <div className="flex items-center p-6 flex-1">
+                <div className="avatar flex items-center gap-8">
+                  <div className="icon h-32 w-32 bg-white rounded-full flex items-center justify-center overflow-hidden">
+                    <Image 
+                      src={user?.avatar && user.avatar.length > 0 ? user.avatar : "/assets/img/profile-user.png"} 
+                      width={96} 
+                      height={96} 
+                      alt='profile' 
+                      className="object-cover"
+                      onError={(e) => {
+                        e.target.src = "/assets/img/profile-user.png";
+                      }}
+                    />
+                  </div>
+                  
+                  <div className="info flex flex-col gap-2">
+                    <p className='text-black font-bold text-2xl'>{user?.name || 'Loading...'}</p>
+                    <p className='text-black font-bold text-xl'>{user?.username || ''}</p>
+                    <p className='text-black font-bold text-lg'>{user?.highlights || ''}</p>
+                    
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {user?.institute && (
+                        <span className='bg-yellow-500 text-black font-bold text-sm px-3 py-1 rounded-full'>
+                          {user.institute}
+                        </span>
+                      )}
+                      {user?.designation && (
+                        <span className='bg-yellow-500 text-black font-bold text-sm px-3 py-1 rounded-full'>
+                          {user.designation}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Bio and Action Section */}
+              <div className="bio flex flex-col justify-between p-6 w-80">
+                <div className="btn flex justify-end">
+                  <button 
+                    className='font-bold text-sm px-6 py-3 rounded-2xl shadow-md transition-colors'
+                    style={{
+                      backgroundColor: '#eab308 !important',
+                      color: '#000000 !important',
+                      border: 'none'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.target.style.backgroundColor = '#d97706';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.target.style.backgroundColor = '#eab308';
+                    }}
+                  >
+                    {loggedIn ? "Update" : "Connect"}
+                  </button>
+                </div>
+
+                <div className="bio-text flex-1 flex items-center">
+                  <p className='text-white font-medium text-sm leading-relaxed'>
+                    {user?.bio || 'No bio available'}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Posts Section */}
+            {!loading && user && Object.keys(user).length > 0 && (
+              <Posts 
+                users={user} 
+                OpenCommentSection={OpenCommentSection} 
+                Feed={feeds} 
+                likedMap={liked} 
+                fromProfile={true} 
+              />
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+export default ProfilePage

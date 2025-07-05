@@ -6,6 +6,8 @@ import { ApiError } from "../utils/ApiError.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
 import fs from 'fs/promises';
 import { ApiResponse } from "../utils/ApirResponse.js";
+import { decrypt } from "../utils/encryption.js";
+
 
 // const getuserinfo= async (req, res) => {
 //     try {
@@ -81,28 +83,94 @@ const postingContent = AsyncHandler(async (req, res) => {
 })
 
 const showPosts = AsyncHandler(async (req, res) => {
-    //store the posts in a variable
-    //sort the posts based on likes and if likes are same then sort it based on created at timestamp
-    //sent it to the client
-
     try {
-        const post = await Post.find();
-        post.sort((a, b) => {
-            if (Object.keys(a.likes).length == Object.keys(b.likes).length) return b.updatedAt - a.updatedAt;
+        let decryptedUserId = "";
+        let isLoggedInUser = false;
+        let posts = [];
+        let user = null;
 
-            return Object.keys(a.likes).length - Object.keys(b.likes).length;
+        // Step 1: Get accessToken from cookies or headers
+        const accessToken = req.cookies?.accessToken || req.header("Authorization")?.replace("Bearer ", "");
+        let loggedInUser = null;
 
-        })
+        if (accessToken) {
+            loggedInUser = await User.findOne({ AccessToken: accessToken });
+        }
 
-        return res.status(200).json(
-            new ApiResponse(200, post, "post viewed successfully")
-        )
+        // Step 2: Check if request has userId (Profile.jsx case)
+        if (req.method === "POST" && req.body && req.body !== "") {
+            const { encryptedId } = req.body;
+            console.log("Received encryptedId:", encryptedId);
+            
+            if (!encryptedId) {
+                throw new ApiError(400, "Encrypted user ID is required");
+            }
+            
+            try {
+                decryptedUserId = decrypt(encryptedId);
+                console.log("Decrypted userId:", decryptedUserId);
+            } catch (decryptError) {
+                console.error("Decryption failed:", decryptError);
+                throw new ApiError(400, "Invalid user ID format");
+            }
+
+            // Get posts for that user
+            posts = await Post.find({ postId: decryptedUserId });
+
+            // Find that user (for profile info)
+            user = await User.findOne({ _id: decryptedUserId });
+            
+            if (!user) {
+                throw new ApiError(404, "User not found");
+            }
+
+            // Check if loggedInUser is same as decrypted one
+            if (loggedInUser && loggedInUser._id.toString() === decryptedUserId.toString()) {
+                isLoggedInUser = true;
+            }
+
+        } else {
+            // Step 3: If GET request from Feed.jsx (no id provided)
+            posts = await Post.find();
+            decryptedUserId = loggedInUser?._id?.toString() || "";
+        }
+
+        // Step 4: Sort posts by likes, then updatedAt
+        posts.sort((a, b) => {
+            const likeDiff = Object.keys(b.likes).length - Object.keys(a.likes).length;
+            if (likeDiff !== 0) return likeDiff;
+            return new Date(b.updatedAt) - new Date(a.updatedAt);
+        });
+
+        // Step 5: Prepare initialLikes map for frontend
+        const initialLikes = new Map();
+        posts.forEach(p => {
+            if (p.likes && p.likes.has(decryptedUserId)) {
+                initialLikes.set(p._id.toString(), true);
+            }
+        });
+
+        // Step 6: Prepare final response
+        const responsePayload = {
+            posts,
+            initialLikes: Object.fromEntries(initialLikes),
+        };
+
+        if (user) {
+            // Sanitize user object before sending
+            const { _id, password, AccessToken, ...sanitizedUser } = user._doc;
+            responsePayload.user = sanitizedUser;
+            responsePayload.isLoggedInUser = isLoggedInUser;
+        }
+
+        return res.status(200).json(new ApiResponse(200, responsePayload, "Posts fetched successfully"));
+
     } catch (error) {
-        console.log(error);
-        throw new ApiError(500, error?.message || "Could not show feed");
-
+        console.error(error);
+        throw new ApiError(500, error?.message || "Could not fetch posts");
     }
-})
+});
+
 
 const likePosts = AsyncHandler(async (req, res) => {
     try {
@@ -206,8 +274,26 @@ const getsortedComments = AsyncHandler(async (req, res) => {
             return updatedAtB - updatedAtA; // More recently updated comments come first
         });
 
+        const InitialLikes = new Map();
+        const InitiallikedReply = new Map();
+
+        comment.forEach(p => {
+            if (p.likes && p.likes.has(userId.toString())) {
+                InitialLikes.set(p._id, true);
+            }
+
+            if (p.replies) {
+                p.replies.forEach(rpy => {
+                    if (rpy.likes && rpy.likes.has(userId.toString())) {
+                        InitiallikedReply.set(rpy._id, true);
+                    }
+                })
+            }
+        });
+
+
         return res.status(200).json(
-            new ApiResponse(200, comment, "comment viewed succufully")
+            new ApiResponse(200, { comments: comment, initialLikes: Object.fromEntries(InitialLikes), InitiallikedReply: Object.fromEntries(InitiallikedReply) }, "comment viewed succufully")
         )
     } catch (error) {
         console.error(error);
@@ -272,10 +358,10 @@ const postReplies = AsyncHandler(async (req, res) => {
 
         const updatedComment = await comment.save();
 
-        
+
 
         const io = req.app.get('io');
-        io.emit("newReply", {commentId, reply});
+        io.emit("newReply", { commentId, reply });
 
         console.log("reply posted")
         return res.status(200).json(
@@ -290,12 +376,12 @@ const postReplies = AsyncHandler(async (req, res) => {
 const showReplies = AsyncHandler(async (req, res) => {
     try {
         const { commentId } = req.body; //Here commentId is comming undefined
-        console.log("My comment Id: ",commentId)
-        if(!commentId) throw new ApiError(404, "comment not found")
+        console.log("My comment Id: ", commentId)
+        if (!commentId) throw new ApiError(404, "comment not found")
         const comment = await Comment.findById(commentId);
         // console.log(comment);
         const replyies = comment.replies;
-        console.log("My reply: " ,replyies)
+        console.log("My reply: ", replyies)
         const AccessToken = req.cookies?.accessToken || req.header("Authorization")?.replace("bearer ", "");
         const user = await User.findOne({ AccessToken });
         const userId = user._id;
@@ -360,7 +446,7 @@ const likeReplies = AsyncHandler(async (req, res) => {
         myreply.likes = likes;
 
         // Save the parent document
-        const updatedComments=await comment.save();
+        const updatedComments = await comment.save();
 
         const io = req.app.get('io');
         io.emit("updatedComment", updatedComments)

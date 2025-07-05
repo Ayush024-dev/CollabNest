@@ -4,7 +4,7 @@ import Image from 'next/image'
 import { Typography, Button } from '@mui/joy'
 import axios from 'axios'
 import Link from 'next/link'
-const NavBar = () => {
+const NavBar = ({ profileLink, MessageLink}) => {
     const [isloggedin, setLoggedIn] = useState(false);
     const check = async () => {
         try {
@@ -44,7 +44,7 @@ const NavBar = () => {
                     <div className="navbar text-white font-inconsolata flex gap-4 justify-center">
                         <Link href="/components/feeds">About Us</Link>
                         <Link href="/components/feeds">Messages</Link>
-                        <Link href="/components/feeds">Profile</Link>
+                        <Link href={`/components/UserProfile?user=${profileLink}`}>Profile</Link>
                     </div>
                 }
             </div>

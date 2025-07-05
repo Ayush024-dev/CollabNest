@@ -8,6 +8,8 @@ import ReplyIcon from '@mui/icons-material/Reply';
 import ThumbUpOutlinedIcon from '@mui/icons-material/ThumbUpOutlined';
 import ThumbUpIcon from '@mui/icons-material/ThumbUp';
 import io from 'socket.io-client';
+import { likeComments } from '../likePosts/page';
+import { likeReplies } from '../likePosts/page';
 
 const CommentSection = ({ postId, userId, onShowMsg, onShowError, users }) => {
   const [comment, setcomment] = useState({ postId, comment: "" });
@@ -31,33 +33,12 @@ const CommentSection = ({ postId, userId, onShowMsg, onShowError, users }) => {
 
   const getComments = async () => {
     try {
-      const response = await axios.post("http://localhost:8080/api/v1/posts/view_comment", { postId });
+      const response = await axios.post("http://localhost:8080/api/v1/posts/view_comment", { postId },{ withCredentials: true });
       const comments = response.data?.data || [];
-      getSortedComments(comments);
+      getSortedComments(comments.comments);
       //to stored initial liked comments
-
-      const initialLiked = new Map();
-      const initiallikedReply = new Map();
-      comments.forEach((feed) => {
-        if (feed.likes) {
-          if (Object.keys(feed.likes).includes(userId)) initialLiked.set(feed._id, true);
-        }
-
-        if (feed.replies) {
-          feed.replies.forEach(rpy => {
-            if (rpy.likes && Object.keys(rpy.likes).includes(userId)) {
-              initiallikedReply.set(rpy._id, true);
-            }
-          });
-        }
-
-
-      });
-
-      console.log(initialLiked)
-
-      setLiked(initialLiked);
-      setLikedReply(initiallikedReply)
+      setLiked(new Map(Object.entries(comments.initialLikes)));
+      setLikedReply(new Map(Object.entries(comments.InitiallikedReply)));
       console.log(comments);
     } catch (error) {
       console.error("Failed to fetch comments:", error);
@@ -66,25 +47,7 @@ const CommentSection = ({ postId, userId, onShowMsg, onShowError, users }) => {
   };
 
   const likeComment = async ({ commentId }) => {
-    try {
-      await axios.patch("http://localhost:8080/api/v1/posts/like_comment", { commentId }, { withCredentials: true });
-
-      setLiked((prevLiked) => {
-        const updatedLiked = new Map(prevLiked);
-
-        if (updatedLiked.has(commentId)) {
-          updatedLiked.delete(commentId); // Unlike
-        } else {
-          updatedLiked.set(commentId, true); // Like
-        }
-
-        return updatedLiked;
-      });
-
-    } catch (error) {
-      console.error("Failed to like comment: ", error);
-      onShowError(error.response.data);
-    }
+    await likeComments({ commentId, setLiked, onShowError })
   }
 
   const postReplies = async ({ comment_id }) => {
@@ -129,25 +92,7 @@ const CommentSection = ({ postId, userId, onShowMsg, onShowError, users }) => {
   };
 
   const likeReply = async ({ replyId, commentId }) => {
-    try {
-      await axios.patch("http://localhost:8080/api/v1/posts/like_reply", { replyId, commentId }, { withCredentials: true });
-
-      setLikedReply((prevLiked) => {
-        const updatedLiked = new Map(prevLiked);
-
-        if (updatedLiked.has(replyId)) {
-          updatedLiked.delete(replyId); // Unlike
-        } else {
-          updatedLiked.set(replyId, true); // Like
-        }
-
-        return updatedLiked;
-      });
-
-    } catch (error) {
-      console.error("Failed to like reply: ", error);
-      onShowError(error.response.data);
-    }
+    await likeReplies({ replyId, commentId, setLikedReply, onShowError});
   }
 
   useEffect(() => {

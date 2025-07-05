@@ -36,8 +36,8 @@ const Login = ({ onShowAlert, onShowError }) => {
       setLoading(false);
 
       // Use searchParams to create the URL with query parameters
-      const url = `/components/feeds?id=${encodeURIComponent(userId.toString())}`;
-      router.push(url);
+      // const url = `/components/feeds?id=${encodeURIComponent(userId.toString())}`;
+      router.push('/components/feeds');
     } catch (error) {
       setLoading(false);
 

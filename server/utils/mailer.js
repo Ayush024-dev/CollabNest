@@ -22,14 +22,14 @@ export const sendEmail= async({email, emailType, userId})=>{
         }
 
         const transport = nodemailer.createTransport({
-            host: process.env.HOST,
-            port: Number(process.env.MAIL_PORT),
-            secure: Boolean(process.env.SECURE),
-            service: process.env.SERVICE,
+            service: "gmail",
             auth: {
                 user: process.env.USER,
                 pass: process.env.PASS,
             },
+            tls: {
+                rejectUnauthorized: false,
+            }
         });
 
         // Use encodeURIComponent to ensure the token is correctly formatted in the URL

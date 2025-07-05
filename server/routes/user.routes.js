@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { aboutUser, alluserInfo, isloggedin, loginUser, logoutUser, registerUser, verifyEmail } from "../controllers/user.controller.js";
+import { aboutUser, alluserInfo, isloggedin, loginUser, logoutUser, registerUser, verifyEmail, getUserPosts } from "../controllers/user.controller.js";
 import upload from "../middleware/multer.middleware.js";
 import { verifyJWT } from "../middleware/auth.middleware.js";
 
@@ -29,6 +29,11 @@ router.route("/isLoggedIn").get(
 )
 router.route("/allUserInfo").get(
     alluserInfo
+)
+
+router.route("/getUserFeeds").post(
+    verifyJWT,
+    getUserPosts
 )
 
 export default router

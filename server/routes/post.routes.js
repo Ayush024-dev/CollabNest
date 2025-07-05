@@ -9,9 +9,10 @@ const router=Router();
 router.route("/posting_content").post(
     verifyJWT, upload.array("image",3), postingContent
 )
-router.route("/view_content").get(
-    showPosts
-)
+router.route("/view_content")
+    .get(showPosts)
+    .post(showPosts);
+
 router.route("/like_content").patch(
     verifyJWT,likePosts
 )
