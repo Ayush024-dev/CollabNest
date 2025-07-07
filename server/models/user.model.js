@@ -73,6 +73,7 @@ const userSchema= new Schema({
         type: Number,
         default: 0
     },
+    connections: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
     forgotPasswordToken: String,
     forgotPasswordTokenExpiry: Date,
     verifyToken: String,

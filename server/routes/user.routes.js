@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { aboutUser, alluserInfo, isloggedin, loginUser, logoutUser, registerUser, verifyEmail, getUserPosts } from "../controllers/user.controller.js";
+import { aboutUser, alluserInfo, isloggedin, loginUser, logoutUser, registerUser, verifyEmail, getUserPosts, sendConnectionRequest, getUserConnectionStatus, AcceptOrRejectConnection, showNotifications, RemoveOrWithdrawConnection } from "../controllers/user.controller.js";
 import upload from "../middleware/multer.middleware.js";
 import { verifyJWT } from "../middleware/auth.middleware.js";
 
@@ -34,6 +34,31 @@ router.route("/allUserInfo").get(
 router.route("/getUserFeeds").post(
     verifyJWT,
     getUserPosts
+)
+
+router.route("/sendConnectionReq").post(
+    verifyJWT,
+    sendConnectionRequest
+)
+
+router.route("/getUserConnectionStatus").post(
+    verifyJWT,
+    getUserConnectionStatus
+)
+
+router.route("/AcceptOrRejectConnectionRequest").post(
+    verifyJWT,
+    AcceptOrRejectConnection
+)
+
+router.route("/showNotification").get(
+    verifyJWT,
+    showNotifications
+)
+
+router.route("/RemoveOrWithdrawRequest").post(
+    verifyJWT,
+    RemoveOrWithdrawConnection
 )
 
 export default router

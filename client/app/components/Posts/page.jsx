@@ -110,7 +110,7 @@ const Posts = ({ users, OpenCommentSection, Feed, likedMap, fromProfile, onShowE
     };
     return (
         <div className="h-[calc(100vh-160px)] overflow-y-auto pr-4">
-            {console.log(users)}
+            {/* {console.log(users)} */}
             <div className="flex flex-col gap-5 font-inconsolata">
                 {feeds.map((feed) => (
                     <div key={feed._id} className="rounded-md bg-lightBlue p-4 shadow-2xl">

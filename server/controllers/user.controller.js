@@ -1,5 +1,8 @@
 import User from "../models/user.model.js";
 import Post from "../models/post.model.js"
+import ConnectionRequest from "../models/connectionReq.model.js";
+import Notification from "../models/notification.model.js";
+
 import { ApiResponse } from "../utils/ApirResponse.js";
 import { ApiError } from "../utils/ApiError.js";
 import { AsyncHandler } from "../utils/asyncHandler.js";
@@ -7,6 +10,7 @@ import { sendEmail } from "../utils/mailer.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
 import fs from 'fs/promises';
 import { encrypt, decrypt } from "../utils/encryption.js";
+
 
 const GenerateAccessToken = async (userid) => {
     try {
@@ -236,7 +240,7 @@ const logoutUser = AsyncHandler(async (req, res) => {
 
 const aboutUser = AsyncHandler(async (req, res) => {
     try {
-        const { username, designation, institute, bio } = req.body;
+        const { username, designation, institute, Bio } = req.body;
 
         if (!username || !designation || !institute) {
             throw new ApiError(404, "Please provide required fields!!");
@@ -263,7 +267,7 @@ const aboutUser = AsyncHandler(async (req, res) => {
                 username,
                 designation,
                 institute,
-                bio,
+                Bio,
                 $unset: { AccessToken: "" }, // Remove the accessToken field
             },
             { new: true } // Return the updated document (optional)
@@ -287,11 +291,11 @@ const aboutUser = AsyncHandler(async (req, res) => {
 
 const isloggedin = AsyncHandler(async (req, res) => {
     try {
-        const user=req.user;
+        const user = req.user;
 
         const user_id = req.userId
 
-        console.log("my id: ",user_id)
+        console.log("my id: ", user_id)
 
 
         const encryptedId = encrypt(user_id.toString());
@@ -307,22 +311,22 @@ const isloggedin = AsyncHandler(async (req, res) => {
 
 const alluserInfo = AsyncHandler(async (req, res) => {
     try {
-      const data = await User.find().select("_id name avatar institute");
-      let JsonData = {};
-  
-      data.forEach(element => {
-        JsonData[element._id] = {
-          ...element.toObject(),
-          _id: encrypt(element._id.toString())  // Encrypt only the value part's _id
-        };
-      });
-  
-      return res.status(200).send(JsonData);
+        const data = await User.find().select("_id name avatar institute");
+        let JsonData = {};
+
+        data.forEach(element => {
+            JsonData[element._id] = {
+                ...element.toObject(),
+                _id: encrypt(element._id.toString())  // Encrypt only the value part's _id
+            };
+        });
+
+        return res.status(200).send(JsonData);
     } catch (error) {
-      console.error(error);
-      throw new ApiError(500, error?.message || "Cannot get info");
+        console.error(error);
+        throw new ApiError(500, error?.message || "Cannot get info");
     }
-  });
+});
 
 
 const getUserPosts = AsyncHandler(async (req, res) => {
@@ -353,6 +357,234 @@ const getUserPosts = AsyncHandler(async (req, res) => {
     }
 })
 
+const sendConnectionRequest = AsyncHandler(async (req, res) => {
+    try {
+        const senderId = req.userId
+
+        const { decryptedreceiverId } = req.body;
+
+        const receiverId = decrypt(decryptedreceiverId);
+
+        if (senderId.toString() === receiverId) throw new ApiError(401, "Cannot send connection to yourself!!");
+
+        const existingUser = await ConnectionRequest.findOne({ sender: senderId, receiver: receiverId })
+
+        if (existingUser) throw new ApiError(401, "Connection request already sent!!")
+
+        const loggedinUser = await User.findById(senderId).select('connections');
+
+        const isAlreadyConnected = loggedinUser.connections.some(conn =>
+            conn.toString() === receiverId
+        );
+
+        if (isAlreadyConnected) {
+            throw new ApiError(401, "User is already a connection!!")
+        }
+
+        // Creation of connection request after all the checks
+        await ConnectionRequest.create({
+            sender: senderId,
+            receiver: receiverId
+        })
+
+        // creation of notification
+        const notification = await Notification.create({
+            user: receiverId,
+            from: senderId,
+            type: 'connection_req'
+        });
+
+        // Emit notification
+        const io = req.app.get('io');
+        io.to(receiverId).emit('newNotification', {
+            type: 'connection_req',
+            from: senderId,
+            createdAt: notification.createdAt,
+            notificationId: notification._id
+        })
+
+        return res.json(
+            new ApiResponse(200, notification, "Connection request sent!!")
+        )
+
+    } catch (error) {
+        console.log(error);
+        throw new ApiError(500, error?.message || "Could not send the request");
+    }
+})
+
+const AcceptOrRejectConnection = AsyncHandler(async (req, res) => {
+    try {
+        const { encryptedId, type, notification_id } = req.body;
+        const myId = req.userId;
+
+        if (!encryptedId) throw new ApiError(404, "User not found");
+
+        if (!type || (type !== "Accept" && type !== "Reject"))
+            throw new ApiError(401, "Invalid operation");
+
+        const senderId = decrypt(encryptedId);
+
+        // ❌ Delete the connection request regardless of Accept/Reject
+        const deletePost = await ConnectionRequest.findOneAndDelete({
+            sender: senderId,
+            receiver: myId,
+        });
+
+        if (!deletePost) throw new ApiError(404, "No connection request found");
+
+        // ✅ Mark the existing notification as read
+        await Notification.findByIdAndUpdate(notification_id, {
+            read: true,
+        });
+
+        // ✅ If connection accepted
+        if (type === "Accept") {
+            // Push senderId into my connections
+            await User.findByIdAndUpdate(myId, {
+                $addToSet: { connections: senderId },
+            });
+
+            // Push myId into sender's connections
+            await User.findByIdAndUpdate(senderId, {
+                $addToSet: { connections: myId },
+            });
+
+            // Create notification for sender
+            const newNotification = await Notification.create({
+                user: senderId,
+                from: myId,
+                type: "connection_accepted",
+            });
+
+            // Emit real-time notification to sender
+            const io = req.app.get("io");
+            io.to(senderId.toString()).emit("newNotification", {
+                type: "connection_accepted",
+                from: myId,
+                createdAt: newNotification.createdAt,
+                notificationId: newNotification._id,
+            });
+        }
+
+        return res.status(200).json({
+            message: `Connection request ${type === "Accept" ? "accepted" : "rejected"} successfully.`,
+        });
+    } catch (error) {
+        console.log(error);
+        throw new ApiError(500, error?.message || "Not able to follow right now, Please try later");
+    }
+});
+
+
+const getUserConnectionStatus = AsyncHandler(async (req, res) => {
+    try {
+        const { encryptedUserId } = req.body;
+        const receiverId = decrypt(encryptedUserId);
+        const myId = req.userId;
+
+
+        const existingRequest = await ConnectionRequest.findOne({
+            sender: myId,
+            receiver: receiverId
+        });
+
+        if (existingRequest) {
+            return res.status(200).json({ Connection_status: "pending" });
+        }
+
+
+        const me = await User.findById(myId).select("connections");
+        const isAlreadyConnected = me.connections.some(conn =>
+            conn.toString() === receiverId
+        );
+
+        if (isAlreadyConnected) {
+            return res.status(200).json({ Connection_status: "Connection" });
+        }
+
+
+        return res.status(200).json({ Connection_status: "No_Connection" });
+
+    } catch (error) {
+        console.log(error);
+        throw new ApiError(500, error?.message || "Could not get connection status!");
+    }
+});
+
+const showNotifications = AsyncHandler(async (req, res) => {
+    try {
+        const myId = req.userId;
+
+        const notifications = await Notification.find({ user: myId });
+
+        // sort the notification based on the createdAt field and return the notifications
+
+        notifications.sort((a, b) => {
+
+            return new Date(b.createdAt) - new Date(a.createdAt);
+        });
+
+        return res.json(
+            new ApiResponse(200, notifications, "notifications fetched successfully")
+        )
+    } catch (error) {
+        console.log(error);
+        throw new ApiError(500, error?.message || "Not able to show notifications!!")
+    }
+})
+
+const RemoveOrWithdrawConnection = AsyncHandler(async (req, res) => {
+    try {
+        
+
+        const { encryptedUserId } = req.body;
+        const myId = req.userId;
+
+        if (!encryptedUserId) throw new ApiError(404, "User not found");
+
+        const receiverId = decrypt(encryptedUserId);
+
+        const request = await ConnectionRequest.findOneAndDelete({ sender: myId, receiver: receiverId });
+
+        if (request){
+            const notification=await Notification.findOneAndDelete({ user: receiverId, from: myId})
+
+            if(!notification) throw new ApiError(401, "Notification not registered");
+
+
+            res.status(200).json({ message: "Request withdrawn successfully" });
+        }
+
+        const me = await User.findById(myId).select("connections");
+
+        if (!me) {
+            throw new ApiError(404, "User not found");
+        }
+
+        const isConnected = me.connections.some(conn =>
+            conn.toString() === receiverId
+        );
+
+
+        if (!isConnected) throw new ApiError(401, "No connection to remove");
+
+        await User.findByIdAndUpdate(myId, {
+            $pull: { connections: receiverId }
+        });
+
+        await User.findByIdAndUpdate(receiverId, {
+            $pull: { connections: myId }
+        });
+
+        return res.status(200).json({ message: "Connection removed" });
+
+    } catch (error) {
+        console.log(error);
+
+        throw new ApiError(500, error?.message || "Server Error!!")
+    }
+})
 
 export {
     registerUser,
@@ -362,5 +594,10 @@ export {
     aboutUser,
     isloggedin,
     alluserInfo,
-    getUserPosts
+    getUserPosts,
+    sendConnectionRequest,
+    getUserConnectionStatus,
+    AcceptOrRejectConnection,
+    showNotifications,
+    RemoveOrWithdrawConnection
 }
