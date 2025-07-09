@@ -11,6 +11,7 @@ import NavBar from '../nav/page';
 import WritingTab from '../writingTab/page';
 import CommentSection from '../comments/page';
 import Posts from '../Posts/page';
+import Notification from '../Notifications/page';
 
 import CancelIcon from '@mui/icons-material/Cancel';
 import { Alert } from "@mui/material";
@@ -32,6 +33,7 @@ const Feeds = () => {
   const [userid, setUserid] = useState("");
   const [comment, getComment] = useState(false);
   const [postId, setpostId] = useState("");
+  const [openNotif, setOpenNotif] = useState(false);
 
   const router = useRouter();
 
@@ -58,6 +60,17 @@ const Feeds = () => {
     getComment(false);
     setblur(false);
   }
+
+  const OpenNotificationWindow = () => {
+    setOpenNotif(true);
+    setblur(true);
+  }
+
+  const closeNotificationWindow = () => {
+    setOpenNotif(false);
+    setblur(false);
+  }
+
   const handleShowAlert = (message) => {
     setMsg(message);
     setTimeout(() => setMsg(""), 2000);
@@ -136,6 +149,23 @@ const Feeds = () => {
         </div>
       )}
 
+      {openNotif && (
+        <button
+          className="h-11 w-11 absolute top-11 right-4 cursor-pointer z-50"
+          title="my_close_btn"
+          type="button"
+          onClick={closeNotificationWindow}
+        >
+          <CancelIcon htmlColor='yellow' />
+        </button>
+      )}
+
+      {openNotif && (
+        <div className='absolute inset-0 z-40 flex justify-center items-center'>
+          <Notification users={users} onShowError={handleErrorAlert} />
+        </div>
+      )}
+
       {open && (
         <button
           className="h-11 w-11 absolute top-11 right-4 cursor-pointer z-50"
@@ -178,30 +208,30 @@ const Feeds = () => {
         {/* Left Side Panel */}
         <div className="w-32 flex flex-col justify-between py-8 sticky top-[64px]">
           <div className="flex flex-col items-center gap-7">
-            <Image src="/assets/icons/notification.svg" width={48} height={48} alt='noti' />
+            <Image src="/assets/icons/notification.svg" width={48} height={48} alt='noti' onClick={OpenNotificationWindow}/>
             <Image src="/assets/icons/message.svg" width={58} height={58} alt='msg' />
             <Image src="/assets/icons/write.svg" width={58} height={58} alt='write' />
             <Image src="/assets/icons/book.svg" width={58} height={58} alt='book' />
           </div>
           <div className="fixed left-4 bottom-8 z-30">
-          <Button onClick={logout} variant='ghost' className="relative flex items-center justify-center p-0 hover:bg-transparent">
-            {/* Yellow Profile Image as Base */}
-            <Image src="/assets/img/profile.svg" width={66} height={69} alt='profile' className="relative" />
-            {/* Logout Icon Positioned Over the Image */}
-            <LogoutIcon 
-              style={{ 
-                width: "32px", 
-                height: "32px",
-                position: "absolute",
-                top: "50%",
-                left: "50%",
-                transform: "translate(-50%, -50%)",
-                color: "#000000",
-                zIndex: 10
-              }} 
-            />
-          </Button>
-        </div>
+            <Button onClick={logout} variant='ghost' className="relative flex items-center justify-center p-0 hover:bg-transparent">
+              {/* Yellow Profile Image as Base */}
+              <Image src="/assets/img/profile.svg" width={66} height={69} alt='profile' className="relative" />
+              {/* Logout Icon Positioned Over the Image */}
+              <LogoutIcon
+                style={{
+                  width: "32px",
+                  height: "32px",
+                  position: "absolute",
+                  top: "50%",
+                  left: "50%",
+                  transform: "translate(-50%, -50%)",
+                  color: "#000000",
+                  zIndex: 10
+                }}
+              />
+            </Button>
+          </div>
         </div>
 
         {/* Main Center Content */}
@@ -223,7 +253,7 @@ const Feeds = () => {
             </Button>
           </div>
 
-          <Posts users={users} OpenCommentSection={OpenCommentSection} fromProfile={false} onShowError={handleErrorAlert}/>
+          <Posts users={users} OpenCommentSection={OpenCommentSection} fromProfile={false} onShowError={handleErrorAlert} />
 
         </div>
 
