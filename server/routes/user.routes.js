@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { aboutUser, alluserInfo, isloggedin, loginUser, logoutUser, registerUser, verifyEmail, getUserPosts, sendConnectionRequest, getUserConnectionStatus, AcceptOrRejectConnection, showNotifications, RemoveOrWithdrawConnection } from "../controllers/user.controller.js";
+import { aboutUser, alluserInfo, isloggedin, loginUser, logoutUser, registerUser, verifyEmail, getUserPosts, sendConnectionRequest, getUserConnectionStatus, AcceptOrRejectConnection, showNotifications, RemoveOrWithdrawConnection, toggleReadStatus } from "../controllers/user.controller.js";
 import upload from "../middleware/multer.middleware.js";
 import { verifyJWT } from "../middleware/auth.middleware.js";
 
@@ -36,6 +36,7 @@ router.route("/getUserFeeds").post(
     getUserPosts
 )
 
+// Connection and notification routes
 router.route("/sendConnectionReq").post(
     verifyJWT,
     sendConnectionRequest
@@ -59,6 +60,11 @@ router.route("/showNotification").get(
 router.route("/RemoveOrWithdrawRequest").post(
     verifyJWT,
     RemoveOrWithdrawConnection
+)
+
+router.route("/toggleStatus").patch(
+    verifyJWT,
+    toggleReadStatus
 )
 
 export default router

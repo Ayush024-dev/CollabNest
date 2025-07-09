@@ -33,12 +33,16 @@ const Notification = ({ Allusers, onShowError }) => {
     }
   }
 
-  const handleRead = async ({ notification_id }) => {
+  const handleRead = async (notif) => {
     try {
-      await axios.patch("http://localhost:8080/api/v1/users/toggleStatus", { notification_id: notification_id });
+      await axios.patch(
+        "http://localhost:8080/api/v1/users/toggleStatus",
+        { notification_id: notif._id },
+        { withCredentials: true }
+      );
 
-      getNotRead(prev => prev.filter(n => n._id !== notification_id._id));
-      getRead(prev => [notification_id, ...prev]);
+      getNotRead(prev => prev.filter(n => n._id !== notif._id));
+      getRead(prev => [notif, ...prev]);
     } catch (error) {
       console.log(error);
       onShowError(error?.response?.data?.message);
@@ -47,14 +51,19 @@ const Notification = ({ Allusers, onShowError }) => {
 
   const handleDecision = async ({ encryptedId, type, notification_id }) => {
     try {
-      const setdecison = await axios.post("http://localhost:8080/api/v1/users/AcceptOrRejectConnectionRequest",
+      const setdecison = await axios.post(
+        "http://localhost:8080/api/v1/users/AcceptOrRejectConnectionRequest",
         { encryptedId: encryptedId, type: type },
         { withCredentials: true }
       );
 
       console.log(setdecison);
-      notification_id.__decision = type;
-      handleRead({ notification_id: notification_id });
+      // Find the notification object in notRead
+      const notif = notRead.find(n => n._id === notification_id);
+      if (notif) {
+        notif.__decision = type;
+        handleRead(notif);
+      }
     } catch (error) {
       console.log(error);
       onShowError(error?.response?.data?.message);
@@ -89,7 +98,7 @@ const Notification = ({ Allusers, onShowError }) => {
 
   const NotificationItem = ({ notif, isRead = false }) => {
     const sender = users.data?.[notif.from.toString()];
-    
+    console.log(sender);
     return (
       <div className={`p-4 rounded-lg border transition-all duration-200 hover:bg-gray-700/50 ${
         isRead ? 'bg-gray-800/50 border-gray-700' : 'bg-gray-800 border-gray-600'
@@ -117,9 +126,9 @@ const Notification = ({ Allusers, onShowError }) => {
                   size="sm"
                   className="bg-green-600 hover:bg-green-700 text-white"
                   onClick={() => handleDecision({ 
-                    encryptedId: notif.encryptedId, 
+                    encryptedId: sender._id, 
                     type: "Accept", 
-                    notification_id: notif 
+                    notification_id: notif._id
                   })}
                 >
                   Accept
@@ -129,9 +138,9 @@ const Notification = ({ Allusers, onShowError }) => {
                   variant="ghost"
                   className="border border-gray-600 text-gray-300 hover:bg-gray-700"
                   onClick={() => handleDecision({ 
-                    encryptedId: notif.encryptedId, 
+                    encryptedId: sender._id, 
                     type: "Reject", 
-                    notification_id: notif 
+                    notification_id: notif._id 
                   })}
                 >
                   Reject
@@ -153,7 +162,7 @@ const Notification = ({ Allusers, onShowError }) => {
               <Button
                 size="sm"
                 className="bg-green-600 hover:bg-green-700 text-white mt-3"
-                onClick={() => handleRead({ notification_id: notif })}
+                onClick={() => handleRead(notif)}
               >
                 Mark as Read
               </Button>

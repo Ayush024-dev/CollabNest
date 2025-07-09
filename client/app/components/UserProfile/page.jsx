@@ -144,7 +144,7 @@ const ProfilePage = () => {
       getConnectionStatus("No_Connection");
 
       console.log("✅ Connection removed or withdrawn:", response.data.message);
-      handleRemoveOrWithdraw(response.data.message)
+      // handleRemoveOrWithdraw(response.data.message)
     } catch (error) {
       console.error(error);
       const errorMessage = error.response?.data?.message || error.message || "Could not send connection request";

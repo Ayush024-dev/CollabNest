@@ -357,6 +357,8 @@ const getUserPosts = AsyncHandler(async (req, res) => {
     }
 })
 
+// Connection Request and Notification
+
 const sendConnectionRequest = AsyncHandler(async (req, res) => {
     try {
         const senderId = req.userId
@@ -415,7 +417,7 @@ const sendConnectionRequest = AsyncHandler(async (req, res) => {
 
 const AcceptOrRejectConnection = AsyncHandler(async (req, res) => {
     try {
-        const { encryptedId, type, notification_id } = req.body;
+        const { encryptedId, type } = req.body;
         const myId = req.userId;
 
         if (!encryptedId) throw new ApiError(404, "User not found");
@@ -433,10 +435,6 @@ const AcceptOrRejectConnection = AsyncHandler(async (req, res) => {
 
         if (!deletePost) throw new ApiError(404, "No connection request found");
 
-        // ✅ Mark the existing notification as read
-        await Notification.findByIdAndUpdate(notification_id, {
-            read: true,
-        });
 
         // ✅ If connection accepted
         if (type === "Accept") {
@@ -514,25 +512,53 @@ const getUserConnectionStatus = AsyncHandler(async (req, res) => {
 
 const showNotifications = AsyncHandler(async (req, res) => {
     try {
-        const myId = req.userId;
+      const myId = req.userId;
+  
+      let notifications = await Notification.find({ user: myId });
+  
+      
+      notifications.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  
+      
+    //   const encryptedNotifications = notifications.map((notif) => {
+    //     return {
+    //       ...notif._doc,
+    //       from: encrypt(notif.from.toString()),
+    //       user: encrypt(notif.user.toString())
+    //     };
+    //   });
+  
+      return res.json(
+        new ApiResponse(200, notifications, "Notifications fetched successfully")
+      );
+  
+    } catch (error) {
+      console.log(error);
+      throw new ApiError(500, error?.message || "Not able to show notifications!!");
+    }
+  });
+  
 
-        const notifications = await Notification.find({ user: myId });
+const toggleReadStatus = AsyncHandler(async (req, res) => {
+    try {
+        const { notification_id } = req.body;
 
-        // sort the notification based on the createdAt field and return the notifications
+        const updateNotification = await Notification.findByIdAndUpdate(
+            notification_id,
+            { $set: { read: true } },
+            { new: true } 
+        );
 
-        notifications.sort((a, b) => {
-
-            return new Date(b.createdAt) - new Date(a.createdAt);
-        });
-
-        return res.json(
-            new ApiResponse(200, notifications, "notifications fetched successfully")
-        )
+        if (!updateNotification) {
+            throw new ApiError(404, "No such notification received!!");
+        }
+        console.log(updateNotification);
+        return res.status(200).json({ message: "toggle done" });
     } catch (error) {
         console.log(error);
-        throw new ApiError(500, error?.message || "Not able to show notifications!!")
+        throw new ApiError(500, error?.message || "Trouble setting up the read status!!");
     }
-})
+});
 
 const RemoveOrWithdrawConnection = AsyncHandler(async (req, res) => {
     try {
@@ -599,5 +625,6 @@ export {
     getUserConnectionStatus,
     AcceptOrRejectConnection,
     showNotifications,
-    RemoveOrWithdrawConnection
+    RemoveOrWithdrawConnection,
+    toggleReadStatus
 }
