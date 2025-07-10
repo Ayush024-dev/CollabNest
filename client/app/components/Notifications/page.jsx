@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { ChevronUp, ChevronDown, X, UserPlus, MessageCircle, UserCheck } from "lucide-react"
 
-const Notification = ({ Allusers, onShowError }) => {
+const Notification = ({ Allusers, onShowError, countofNew }) => {
   const [notRead, getNotRead] = useState([]);
   const [Read, getRead] = useState([]);
   const [users, getUsers] = useState([]);
@@ -26,6 +26,7 @@ const Notification = ({ Allusers, onShowError }) => {
 
       getNotRead(currNotReadArr);
       getRead(currReadArr);
+      // Removed countofNew here
 
     } catch (error) {
       console.log(error);
@@ -174,6 +175,12 @@ const Notification = ({ Allusers, onShowError }) => {
   };
 
   useEffect(() => {
+    if (typeof countofNew === "function") {
+      countofNew(notRead.length);
+    }
+  }, [notRead, countofNew]);
+
+  useEffect(() => {
     const initialize = async () => {
       try {
         if (Allusers) getUsers(Allusers);
@@ -194,7 +201,7 @@ const Notification = ({ Allusers, onShowError }) => {
             return [notification, ...prevNotif];
           });
         });
-
+        // Removed countofNew here
         return () => {
           socket.off('newNotification');
           socket.disconnect();

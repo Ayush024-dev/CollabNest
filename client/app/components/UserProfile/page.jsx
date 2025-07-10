@@ -295,14 +295,14 @@ const ProfilePage = () => {
               <div className="bio flex flex-col justify-between p-6 w-80">
                 <div className="btn flex justify-end">
                   {loggedIn && <button
-                    className='font-bold text-sm px-6 py-3 rounded-2xl shadow-md bg-yellow-500 text-black hover:bg-yellow-600 transition-colors'
+                    className='font-bold text-sm px-6 py-3 rounded-2xl shadow-md bg-green-500 text-black hover:bg-green-600 transition-colors'
                   >
                     Update
                   </button>}
 
                   {!loggedIn && connectionStatus === "pending" && (
                     <button
-                      className="font-bold text-sm px-6 py-3 rounded-2xl shadow-md bg-yellow text-black hover:bg-yellow-600 transition-colors"
+                      className="font-bold text-sm px-6 py-3 rounded-2xl shadow-md bg-yellow text-black hover:bg-orange-600 transition-colors"
                       onClick={() => handleRemoveOrWithdraw({ userId: userid })}
                     >
                       Pending
@@ -311,7 +311,7 @@ const ProfilePage = () => {
 
                   {!loggedIn && connectionStatus === "No_Connection" && (
                     <button
-                      className="font-bold text-sm px-6 py-3 rounded-2xl shadow-md bg-yellow-500 text-black hover:bg-yellow-600 transition-colors"
+                      className="font-bold text-sm px-6 py-3 rounded-2xl shadow-md bg-orange-500 text-black hover:bg-orange-600 transition-colors"
                       onClick={() => handleConnect({ userId: userid })}
                     >
                       Connect
@@ -337,7 +337,7 @@ const ProfilePage = () => {
                 </div>
 
                 <div className="bio-text flex-1 flex items-center">
-                  <p className='text-white font-medium text-sm leading-relaxed'>
+                  <p className='text-black font-medium text-sm leading-relaxed'>
                     {user?.bio || 'No bio available'}
                   </p>
                 </div>

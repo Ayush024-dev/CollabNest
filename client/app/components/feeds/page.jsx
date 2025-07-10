@@ -14,7 +14,7 @@ import Posts from '../Posts/page';
 import Notification from '../Notifications/page';
 
 import CancelIcon from '@mui/icons-material/Cancel';
-import { Alert } from "@mui/material";
+import { Alert, useTheme } from "@mui/material";
 import CheckBoxIcon from "@mui/icons-material/CheckBox";
 import ErrorIcon from "@mui/icons-material/Error";
 import LogoutIcon from '@mui/icons-material/Logout';
@@ -34,6 +34,7 @@ const Feeds = () => {
   const [comment, getComment] = useState(false);
   const [postId, setpostId] = useState("");
   const [openNotif, setOpenNotif] = useState(false);
+  const [notificationCount, setNotificationCount] = useState(0);
 
   const router = useRouter();
 
@@ -81,7 +82,9 @@ const Feeds = () => {
     setTimeout(() => setError(""), 2000);
   };
 
-
+  // const handleCountofNotification = (count)=>{
+  //   getCountOfNotif(count);
+  // }
 
   const getUsersInfo = async () => {
     try {
@@ -162,7 +165,7 @@ const Feeds = () => {
 
       {openNotif && (
         <div className='absolute inset-0 z-40 flex justify-center items-center'>
-          <Notification users={users} onShowError={handleErrorAlert} />
+          <Notification users={users} onShowError={handleErrorAlert} countofNew={setNotificationCount} />
         </div>
       )}
 
@@ -208,7 +211,20 @@ const Feeds = () => {
         {/* Left Side Panel */}
         <div className="w-32 flex flex-col justify-between py-8 sticky top-[64px]">
           <div className="flex flex-col items-center gap-7">
-            <Image src="/assets/icons/notification.svg" width={48} height={48} alt='noti' onClick={OpenNotificationWindow}/>
+            <div className="relative group cursor-pointer" onClick={OpenNotificationWindow}>
+              {/* Hover circle */}
+              <div className="w-16 h-16 rounded-full flex items-center justify-center transition duration-200 group-hover:bg-gray-200">
+                <Image src="/assets/icons/notification.svg" width={58} height={58} alt="noti" />
+              </div>
+
+              {/* Red count badge */}
+              {notificationCount > 0 && (
+                <span className="absolute top-0 right-0 bg-red-600 text-white text-xs font-semibold w-5 h-5 rounded-full flex items-center justify-center shadow-md">
+                  {notificationCount > 99 ? "99+" : notificationCount}
+                </span>
+              )}
+            </div>
+
             <Image src="/assets/icons/message.svg" width={58} height={58} alt='msg' />
             <Image src="/assets/icons/write.svg" width={58} height={58} alt='write' />
             <Image src="/assets/icons/book.svg" width={58} height={58} alt='book' />
