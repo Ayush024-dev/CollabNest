@@ -14,7 +14,7 @@ import Posts from '../Posts/page';
 import Notification from '../Notifications/page';
 
 import CancelIcon from '@mui/icons-material/Cancel';
-import { Alert, useTheme } from "@mui/material";
+import { Alert } from "@mui/material";
 import CheckBoxIcon from "@mui/icons-material/CheckBox";
 import ErrorIcon from "@mui/icons-material/Error";
 import LogoutIcon from '@mui/icons-material/Logout';

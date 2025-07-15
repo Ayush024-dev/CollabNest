@@ -1,47 +1,46 @@
-import crypto from "crypto";
+import baseX from 'base-x';
 
-const ENCRYPTION_KEY = process.env.ENCRYPTION_SECRET_KEY;
-// console.log("My Encryption key: ",ENCRYPTION_KEY);
-if (!ENCRYPTION_KEY) {
-  throw new Error("ENCRYPTION_SECRET_KEY is not set in environment variables");
+const BASE62_ALPHABET = process.env.ENCRYPTION_SECRET_KEY || "iTDE6ZYJgklhI8pBV0WoQF5a73zryxmeunjcwKNsA9UvqbRXPS214tfHLOMdCG";
+
+if (!BASE62_ALPHABET) {
+  throw new Error("BASE62_ALPHABET is not set in environment variables");
 }
-// Ensure the key is 32 bytes (AES-256)
-const KEY = Buffer.alloc(32);
-Buffer.from(ENCRYPTION_KEY).copy(KEY);
+if (new Set(BASE62_ALPHABET).size !== 62) {
+  throw new Error("BASE62_ALPHABET must contain exactly 62 unique characters.");
+}
+
+const base62 = baseX(BASE62_ALPHABET);
+
+function bufferToHex(buffer) {
+  // Handles both Buffer and Uint8Array
+  return Array.from(buffer)
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('');
+}
 
 function encrypt(text) {
-  const iv = crypto.randomBytes(16); 
-  const cipher = crypto.createCipheriv("aes-256-cbc", KEY, iv);
-  let encrypted = cipher.update(text, 'utf-8', 'base64');
-  encrypted += cipher.final('base64');
+  if (!text || typeof text !== 'string' || !/^[a-fA-F0-9]{24}$/.test(text)) {
+    throw new Error("encrypt() expects a 24-character hex MongoDB _id string");
+  }
 
-  return `${iv.toString('base64')}:${encrypted}`; 
+  const buffer = Buffer.from(text, 'hex');      // 12-byte Buffer
+  return base62.encode(buffer);                 // Base62 encoded string
 }
 
 function decrypt(encryptedData) {
-  console.log("Here is my data: ",encryptedData)
-  if (!encryptedData || typeof encryptedData !== "string") {
-    throw new Error("Invalid encrypted data: data is missing or not a string");
+  if (!encryptedData || typeof encryptedData !== 'string') {
+    throw new Error("decrypt() expects a base62-encoded string");
   }
-  
-  if (!encryptedData.includes(":")) {
-    throw new Error("Invalid encrypted data format: missing separator");
-  }
-  
-  const [ivStr, encryptedText] = encryptedData.split(':');
-  if (!ivStr || !encryptedText) {
-    throw new Error("Invalid encrypted data format: missing IV or encrypted text");
-  }
-  
+
   try {
-    const iv = Buffer.from(ivStr, 'base64');
-    const decipher = crypto.createDecipheriv("aes-256-cbc", KEY, iv);
-    let decrypted = decipher.update(encryptedText, 'base64', 'utf-8');
-    decrypted += decipher.final('utf-8');
-    return decrypted;
+    const buffer = base62.decode(encryptedData);   // Should return 12-byte Buffer or Uint8Array
+    if (buffer.length !== 12) {
+      throw new Error(`Invalid buffer length after decoding. Expected 12, got ${buffer.length}`);
+    }
+    const hex = bufferToHex(buffer); // Use custom function
+    return hex; // Return 24-char hex MongoDB ObjectId string
   } catch (err) {
-    console.error("Decryption error details:", err);
-    throw new Error("Decryption failed: " + err.message);
+    throw new Error(`Failed to decrypt Base62 string: ${err.message}`);
   }
 }
 

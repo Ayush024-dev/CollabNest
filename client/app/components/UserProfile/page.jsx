@@ -18,6 +18,7 @@ const ProfilePage = () => {
   const [feeds, getFeed] = useState([]);
   const [liked, setLiked] = useState(new Map());
   const [userid, setUserid] = useState("");
+  const [thread, SetThread] = useState("");
   const [loggedIn, setLoggedIn] = useState(false);
   const [msg, setMsg] = useState("");
   const [error, setError] = useState("");
@@ -149,6 +150,17 @@ const ProfilePage = () => {
       console.error(error);
       const errorMessage = error.response?.data?.message || error.message || "Could not send connection request";
       handleErrorAlert(errorMessage);
+    }
+  };
+
+
+  const handleMessage = () => {
+    // Get logged-in user's id from localStorage
+    const loggedInUser = localStorage.getItem("user");
+    // decodedId is the profile being viewed (userid state)
+    if (loggedInUser && userid) {
+      // Navigate to messages page with both user and target parameters
+      window.location.href = `/components/messages?user=${loggedInUser}&target=${userid}`;
     }
   };
 
@@ -328,7 +340,7 @@ const ProfilePage = () => {
                       </button>
                       <button
                         className="font-bold text-sm px-6 py-3 rounded-2xl shadow-md bg-blue-500 text-white hover:bg-blue-600 transition-colors"
-
+                        onClick={handleMessage}
                       >
                         Message
                       </button>

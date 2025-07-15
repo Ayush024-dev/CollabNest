@@ -4,8 +4,14 @@ import Image from 'next/image'
 import { Typography, Button } from '@mui/joy'
 import axios from 'axios'
 import Link from 'next/link'
-const NavBar = ({ profileLink, MessageLink}) => {
+import { useRouter } from 'next/navigation'
+
+
+const NavBar = ({ profileLink }) => {
     const [isloggedin, setLoggedIn] = useState(false);
+    const [userid, setUserid]=useState("");
+
+    const router=useRouter();
     const check = async () => {
         try {
             const data = await axios.get("http://localhost:8080/api/v1/users/isLoggedIn",{withCredentials:true});
@@ -14,11 +20,16 @@ const NavBar = ({ profileLink, MessageLink}) => {
             if(data.data.message==true){
                 setLoggedIn(data.data.message);
             }
+
+            setUserid(data.data.user_id);
+            localStorage.setItem("user",data.data.user_id);
             
         } catch (error) {
             console.error(error);
         }
     }
+
+    
 
     useEffect(() => {
         check();
@@ -41,10 +52,25 @@ const NavBar = ({ profileLink, MessageLink}) => {
 
             <div className="btn flex items-center p-4">
                 {!isloggedin ? <Button color='success' variant='solid'>login</Button> :
-                    <div className="navbar text-white font-inconsolata flex gap-4 justify-center">
-                        <Link href="/components/feeds">About Us</Link>
-                        <Link href="/components/feeds">Messages</Link>
-                        <Link href={`/components/UserProfile?user=${profileLink}`}>Profile</Link>
+                    <div className="navbar flex gap-4 justify-center">
+                        <button
+                            className="text-white font-inconsolata px-3 py-1 rounded transition duration-150 hover:bg-white hover:text-black"
+                            onClick={() => { window.location.href = '/components/feeds'; }}
+                        >
+                            About Us
+                        </button>
+                        <button
+                            className="text-white font-inconsolata px-3 py-1 rounded transition duration-150 hover:bg-white hover:text-black"
+                            onClick={() => { window.location.href = `/components/messages?user=${userid}`; }}
+                        >
+                            Messages
+                        </button>
+                        <button
+                            className="text-white font-inconsolata px-3 py-1 rounded transition duration-150 hover:bg-white hover:text-black"
+                            onClick={() => { window.location.href = `/components/UserProfile?user=${userid}`; }}
+                        >
+                            Profile
+                        </button>
                     </div>
                 }
             </div>
