@@ -13,13 +13,14 @@ const Messages = () => {
   const [users, getusers] = useState({});
   const [showId, setShowId] = useState("");
   const [reqUserId, setReqUserId] = useState("");
-  const [selectedUser, setSelected] = useState(null);
   const [auth, checkAuth] = useState(true);
+  const [loading, setloading]=useState(false);
 
 
   // const location = useLocation();
 
   useEffect(() => {
+    setloading(true);
     const params = new URLSearchParams(window.location.search);
     const userParam = params.get("user");
     const targetParam = params.get("target");
@@ -39,18 +40,24 @@ const Messages = () => {
       const decodedTarget = decodeURIComponent(targetParam).replace(/ /g, "+");
       setShowId(decodedTarget);
     }
+
+    setloading(false);
   }, []);
 
 
   const fetchUsers = async () => {
     try {
+      setloading(true);
       const response = await axios.get("http://localhost:8080/api/v1/users/allUserInfo", {
         withCredentials: true,
       });
+      // console.log(response)
       getusers(response);
     } catch (error) {
       console.error("User fetch failed:", error);
       setError(error?.response?.message || "Could not fetch users");
+    }finally{
+      setloading(false);
     }
   };
 
@@ -58,6 +65,10 @@ const Messages = () => {
     setError(message);
     setTimeout(() => setError(""), 2000);
   };
+
+  const handleShowId = (Id) =>{
+    setShowId(Id);
+  }
 
   useEffect(() => {
     fetchUsers();
@@ -74,6 +85,12 @@ const Messages = () => {
   return (
 
     <div className="w-full h-[90vh] flex border rounded shadow overflow-hidden bg-white">
+      {loading && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-slate-600 bg-opacity-50">
+          <div className="text-white text-xl">Loading...</div>
+        </div>
+      )}
+      {console.log(users)}
       {error && (
         <div className="absolute z-50 top-4 right-4">
           <Alert icon={<ErrorIcon fontSize="inherit" />} severity="error">
@@ -83,13 +100,12 @@ const Messages = () => {
       )}
       {/* Left Panel */}
       <div className="w-[30%] border-r overflow-y-auto">
-        {users && (
+        {!loading && users && (
           <LeftPanel
             users={users}
-            setShowId={setShowId}
+            SetshowId={handleShowId}
             onShowError={handleErrorAlert}
             reqUserId={reqUserId}
-            setSelected={setSelected}
             initialTarget={showId}
           />
         )}
@@ -97,13 +113,12 @@ const Messages = () => {
 
       {/* Right Panel */}
       <div className="w-[70%] relative">
-        {users && showId ? (
+        {!loading && users && showId ? (
           <RightPanel
             users={users}
             onShowError={handleErrorAlert}
             reqUserId={reqUserId}
             showId={showId}
-            Selecteduser={selectedUser}
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center text-gray-400">

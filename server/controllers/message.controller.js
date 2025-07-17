@@ -84,15 +84,49 @@ const sendMessage = AsyncHandler(async (req, res) => {
       }
     }
 
+    const encryptedMsg={
+      ...message.toObject(),
+      sender: encrypt(senderId.toString()),
+      receiver: encrypt(receiverId.toString())
+    }
 
     const io = req.app.get("io");
-    io.to(receiverId).emit("newMessage", {
-      message,
+    const roomName = [encrypt(senderId.toString()), encrypt(receiverId.toString())].sort().join('-');
+    // console.log(`Emitted newMessage to room ${roomName}`);
+    io.to(roomName).emit("newMessage", {
+      encryptedMsg,
+    });
+
+    io.to(encrypt(senderId.toString())).emit("update_converse", {
+      conversation: {
+        sender: encrypt(senderId.toString()),
+        receiver: encrypt(receiverId.toString()),
+        lastMessage: {
+          content,
+          fileUrl: file?.url || "",
+          type,
+          read: false,
+        },
+        updatedAt: message.updatedAt || new Date().toISOString(),
+      }
+    });
+    io.to(encrypt(receiverId.toString())).emit("update_converse", {
+      conversation: {
+        sender: encrypt(senderId.toString()),
+        receiver: encrypt(receiverId.toString()),
+        lastMessage: {
+          content,
+          fileUrl: file?.url || "",
+          type,
+          read: false,
+        },
+        updatedAt: message.updatedAt || new Date().toISOString(),
+      }
     });
 
     return res
       .status(201)
-      .json(new ApiResponse(201, message, "Message sent successfully"));
+      .json(new ApiResponse(201, encryptedMsg, "Message sent successfully"));
   } catch (error) {
     console.log(error);
     throw new ApiError(500, error?.message || "Not able to send message")
@@ -116,8 +150,16 @@ const getMessage = AsyncHandler(async (req, res) => {
       ]
     }).sort({ createdAt: 1 });
 
+
+    const encryptedMsg = messages.map((m) => ({
+      ...m.toObject(),
+      sender: encrypt(m.sender.toString()),
+      receiver: encrypt(m.receiver.toString()),
+    }));
+
+
     return res.json(
-      new ApiResponse(200, messages, "Messages fetched successfully")
+      new ApiResponse(200, encryptedMsg, "Messages fetched successfully")
     );
   } catch (error) {
     console.log(error);
@@ -137,9 +179,16 @@ const lastConversation = AsyncHandler(async (req, res) => {
       ]
     }).sort({ updatedAt: -1 });
 
+    const encryptedConversations = LastConverse.map((c) => ({
+      ...c.toObject(),
+      sender: encrypt(c.sender.toString()),
+      receiver: encrypt(c.receiver.toString()),
+    }));
+
+    
 
     return res.json(
-      new ApiResponse(200, LastConverse, "Last conversation fetched successfully!!")
+      new ApiResponse(200, encryptedConversations, "Last conversation fetched successfully!!")
     )
   } catch (error) {
     console.log(error);

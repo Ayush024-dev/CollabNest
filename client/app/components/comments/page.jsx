@@ -7,7 +7,7 @@ import Image from 'next/image';
 import ReplyIcon from '@mui/icons-material/Reply';
 import ThumbUpOutlinedIcon from '@mui/icons-material/ThumbUpOutlined';
 import ThumbUpIcon from '@mui/icons-material/ThumbUp';
-import io from 'socket.io-client';
+import socket from '@/app/lib/socket';
 import { likeComments } from '../likePosts/page';
 import { likeReplies } from '../likePosts/page';
 
@@ -96,7 +96,6 @@ const CommentSection = ({ postId, userId, onShowMsg, onShowError, users }) => {
   }
 
   useEffect(() => {
-    const socket = io('http://localhost:8080');
     getComments();
 
     socket.on('newComment', (newcomment) => {
@@ -118,7 +117,6 @@ const CommentSection = ({ postId, userId, onShowMsg, onShowError, users }) => {
     return () => {
       socket.off('newComment');
       socket.off('newReply');
-      socket.disconnect();
     };
   }, [postId]);
 

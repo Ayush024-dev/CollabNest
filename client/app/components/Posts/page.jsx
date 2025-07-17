@@ -3,7 +3,7 @@ import { useState, useEffect } from "react"
 import axios from 'axios';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
-import io from 'socket.io-client'
+import socket from '@/app/lib/socket'
 
 import { LikePosts } from '../likePosts/page';
 import ImageModal from '../ImageModel/page';
@@ -54,7 +54,7 @@ const Posts = ({ users, OpenCommentSection, Feed, likedMap, fromProfile, onShowE
                 withCredentials: true,
             });
             const data = response?.data?.data;
-            getFeed(data.posts);
+            getFeed(data.encryptedPost);
             //   console.log(data)
             // console.log("type of likes: ", typeof(data.initialLikes))
             setLiked(new Map(Object.entries(data.initialLikes)));
@@ -79,9 +79,6 @@ const Posts = ({ users, OpenCommentSection, Feed, likedMap, fromProfile, onShowE
             else await getFeeds();
 
 
-            // Initialize socket connection
-            const socket = io('http://localhost:8080');
-
             socket.on('newPost', (newPost) => {
                 getFeed((prevPosts) => {
                     // Only add if not already present
@@ -95,7 +92,6 @@ const Posts = ({ users, OpenCommentSection, Feed, likedMap, fromProfile, onShowE
             // Cleanup on component unmount
             return () => {
                 socket.off('newPost');
-                socket.disconnect();
             };
         };
 
@@ -110,7 +106,7 @@ const Posts = ({ users, OpenCommentSection, Feed, likedMap, fromProfile, onShowE
     };
     return (
         <div className="h-[calc(100vh-160px)] overflow-y-auto pr-4">
-            {/* {console.log(users)} */}
+            {console.log(feeds)}
             <div className="flex flex-col gap-5 font-inconsolata">
                 {feeds.map((feed) => (
                     <div key={feed._id} className="rounded-md bg-lightBlue p-4 shadow-2xl">
@@ -122,8 +118,8 @@ const Posts = ({ users, OpenCommentSection, Feed, likedMap, fromProfile, onShowE
                                             ? users?.avatar?.length > 0
                                                 ? users.avatar
                                                 : "/assets/img/profile.svg"
-                                            : users?.data?.[feed.postId?.toString()]?.avatar?.length > 0
-                                                ? users.data[feed.postId.toString()].avatar
+                                            : users?.data?.[feed.postId]?.avatar?.length > 0
+                                                ? users.data[feed.postId].avatar
                                                 : "/assets/img/profile.svg"
                                     }
                                     height={48}
@@ -138,8 +134,8 @@ const Posts = ({ users, OpenCommentSection, Feed, likedMap, fromProfile, onShowE
                                             users?.name || "Unknown User"
                                         ) : (
                                             users?.data?.[feed.postId?.toString()]?._id ? (
-                                                <Link href={`/components/UserProfile?user=${users.data[feed.postId?.toString()]._id}`}>
-                                                    {users.data[feed.postId?.toString()]?.name || "Unknown User"}
+                                                <Link href={`/components/UserProfile?user=${users.data[feed.postId]._id}`}>
+                                                    {users.data[feed.postId]?.name || "Unknown User"}
                                                 </Link>
                                             ) : (
                                                 "Unknown User"

@@ -6,7 +6,7 @@ import { ApiError } from "../utils/ApiError.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
 import fs from 'fs/promises';
 import { ApiResponse } from "../utils/ApirResponse.js";
-import { decrypt } from "../utils/encryption.js";
+import { encrypt, decrypt } from "../utils/encryption.js";
 
 
 // const getuserinfo= async (req, res) => {
@@ -68,10 +68,17 @@ const postingContent = AsyncHandler(async (req, res) => {
             field,
             image: images.map(image => image.url)
         });
+
+        // Encrypt postId for frontend
+        const encryptedPost = {
+            ...newpost.toObject(),
+            postId: encrypt(newpost.postId.toString()),
+        };
+
         const io = req.app.get('io');
-        io.emit('newPost', newpost);
+        io.emit('newPost', encryptedPost);
         return res.status(201).json(
-            new ApiResponse(201, newpost, "Post published successfully!!")
+            new ApiResponse(201, encryptedPost, "Post published successfully!!")
         )
 
 
@@ -101,11 +108,11 @@ const showPosts = AsyncHandler(async (req, res) => {
         if (req.method === "POST" && req.body && req.body !== "") {
             const { encryptedId } = req.body;
             console.log("Received encryptedId:", encryptedId);
-            
+
             if (!encryptedId) {
                 throw new ApiError(400, "Encrypted user ID is required");
             }
-            
+
             try {
                 decryptedUserId = decrypt(encryptedId);
                 console.log("Decrypted userId:", decryptedUserId);
@@ -119,7 +126,7 @@ const showPosts = AsyncHandler(async (req, res) => {
 
             // Find that user (for profile info)
             user = await User.findOne({ _id: decryptedUserId });
-            
+
             if (!user) {
                 throw new ApiError(404, "User not found");
             }
@@ -151,8 +158,12 @@ const showPosts = AsyncHandler(async (req, res) => {
         });
 
         // Step 6: Prepare final response
+        const encryptedPost = posts.map((m) => ({
+            ...m.toObject(),
+            postId: encrypt(m.postId.toString()),
+        }));
         const responsePayload = {
-            posts,
+            encryptedPost,
             initialLikes: Object.fromEntries(initialLikes),
         };
 
@@ -230,11 +241,17 @@ const postComments = AsyncHandler(async (req, res) => {
             comment
         })
 
+        // Encrypt personId for frontend
+        const encryptedComment = {
+            ...newComment.toObject(),
+            personId: encrypt(newComment.personId.toString()),
+        };
+
         const io = req.app.get('io');
-        io.emit('newComment', newComment);
+        io.emit('newComment', encryptedComment);
 
         return res.status(200).json(
-            new ApiResponse(200, newComment, "Comment posted")
+            new ApiResponse(200, encryptedComment, "Comment posted")
         )
 
     } catch (error) {
@@ -291,9 +308,23 @@ const getsortedComments = AsyncHandler(async (req, res) => {
             }
         });
 
+        // Encrypt personId for frontend
+        const encryptedComment = comment.map(c => {
+            const encryptedReplies = c.replies
+                ? c.replies.map(rpy => ({
+                    ...rpy.toObject(),
+                    replyingId: encrypt(rpy.replyingId.toString()),
+                }))
+                : [];
+            return {
+                ...c.toObject(),
+                personId: encrypt(c.personId.toString()),
+                replies: encryptedReplies,
+            };
+        });
 
         return res.status(200).json(
-            new ApiResponse(200, { comments: comment, initialLikes: Object.fromEntries(InitialLikes), InitiallikedReply: Object.fromEntries(InitiallikedReply) }, "comment viewed succufully")
+            new ApiResponse(200, { comments: encryptedComment, initialLikes: Object.fromEntries(InitialLikes), InitiallikedReply: Object.fromEntries(InitiallikedReply) }, "comment viewed succufully")
         )
     } catch (error) {
         console.error(error);
@@ -364,8 +395,22 @@ const postReplies = AsyncHandler(async (req, res) => {
         io.emit("newReply", { commentId, reply });
 
         console.log("reply posted")
+
+        const encryptedReplies = updatedComment.replies
+            ? updatedComment.replies.map(rpy => ({
+                ...rpy.toObject(),
+                replyingId: encrypt(rpy.replyingId.toString()),
+            }))
+            : [];
+
+        const encryptedComment = {
+            ...updatedComment.toObject(),
+            personId: encrypt(updatedComment.personId.toString()),
+            replies: encryptedReplies,
+        };
+
         return res.status(200).json(
-            new ApiResponse(200, updatedComment, "reply posted")
+            new ApiResponse(200, encryptedComment, "reply posted")
         )
     } catch (error) {
         console.error(error);
@@ -410,8 +455,14 @@ const showReplies = AsyncHandler(async (req, res) => {
             return updatedAtB - updatedAtA; // More recently updated comments come first
         });
 
+        // Encrypt replyingId for each reply before sending to frontend
+        const encryptedReplies = replyies.map(reply => ({
+            ...reply.toObject(),
+            replyingId: encrypt(reply.replyingId.toString()),
+        }));
+
         return res.status(200).json(
-            new ApiResponse(200, replyies, "replies views successfully")
+            new ApiResponse(200, encryptedReplies, "replies views successfully")
         )
     } catch (error) {
         console.error(error);

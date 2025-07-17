@@ -1,9 +1,12 @@
+"use client"
 import axios from "axios";
 import React, { useEffect, useState } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Image, Video, FilesIcon } from "lucide-react";
+import SearchBar from "./SearchBar/page";
+import socket from "@/app/lib/socket";
 
-const LeftPanel = ({ users, onShowError, SetshowId, reqUserId, setSelected, initialTarget }) => {
+const LeftPanel = ({ users, onShowError, SetshowId, reqUserId, initialTarget }) => {
     const [conversations, setConversations] = useState([]);
 
     const getLastConverse = async () => {
@@ -23,6 +26,49 @@ const LeftPanel = ({ users, onShowError, SetshowId, reqUserId, setSelected, init
 
     useEffect(() => {
         getLastConverse();
+        // Join personal room for update_converse events
+        if (reqUserId) {
+          socket.emit('joinRoom', { reqUserId, type: "Personal"});
+        }
+        // Real-time update for last conversation
+        const handleUpdateConverse = (msg) => {
+          const conversation = msg.conversation || msg;
+          // If the current user is either sender or receiver (should always be true)
+          if (conversation.sender === reqUserId || conversation.receiver === reqUserId) {
+            setConversations((prev) => {
+              // Find the conversation (by sender/receiver pair)
+              const idx = prev.findIndex(
+                c => (
+                  (c.sender === conversation.sender && c.receiver === conversation.receiver) ||
+                  (c.sender === conversation.receiver && c.receiver === conversation.sender)
+                )
+              );
+              const updatedConvo = {
+                _id: prev[idx]?._id || `synthetic-${conversation.sender}-${conversation.receiver}`,
+                sender: conversation.sender,
+                receiver: conversation.receiver,
+                lastMessage: conversation.lastMessage,
+                updatedAt: conversation.updatedAt || new Date().toISOString(),
+              };
+              let newConvos;
+              if (idx !== -1) {
+                // Update existing
+                newConvos = [...prev];
+                newConvos[idx] = updatedConvo;
+              } else {
+                // Add new
+                newConvos = [updatedConvo, ...prev];
+              }
+              // Optionally, sort by updatedAt desc
+              newConvos.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
+              return newConvos;
+            });
+          }
+        };
+        socket.on("update_converse", handleUpdateConverse);
+        return () => {
+          socket.off("update_converse", handleUpdateConverse);
+        };
     }, []);
 
     let displayConversations = conversations;
@@ -35,16 +81,27 @@ const LeftPanel = ({ users, onShowError, SetshowId, reqUserId, setSelected, init
             (users.data[c.receiver.toString()]?._id === initialTarget && users.data[c.sender.toString()]?._id === reqUserId)
         )
     ) {
-        
+        displayConversations.push({
+            _id: 'synthetic-' + initialTarget, // unique id for React key
+            sender: reqUserId,                 // logged-in user (encrypted)
+            receiver: initialTarget,           // target user (encrypted)
+            lastMessage: null,                 // no message yet
+            updatedAt: new Date().toISOString(),
+            isSynthetic: true,                 // (optional) flag for your own logic
+        });
     }
 
     const handleClick = (senderId) => {
-        const sender=users?.data[senderId.toString()];
-        SetshowId(sender._id);
 
-        const selectedUser={name: sender.name, avatar: sender.avatar, institute: sender.institute}
+        if(initialTarget){
+            SetshowId(initialTarget);
 
-        setSelected(selectedUser);
+            initialTarget="";
+        }
+        else{
+            SetshowId(senderId);
+        }
+
       };
 
     const formatTimeOrDate = (timestamp) => {
@@ -63,8 +120,9 @@ const LeftPanel = ({ users, onShowError, SetshowId, reqUserId, setSelected, init
 
     return (
         <div className="w-full h-full px-4 py-2 overflow-y-auto space-y-4">
-            {conversations.map((converse) => {
-                const otherUserId = converse.sender; // adjust if needed
+            <SearchBar users={users} onShowError={onShowError} reqUserId={reqUserId} />
+            {displayConversations.map((converse) => {
+                const otherUserId = (converse.sender!= reqUserId)? converse.sender : converse.receiver; 
                 const user = users.data[otherUserId];
                 const lastMessage = converse?.lastMessage;
 
@@ -72,10 +130,7 @@ const LeftPanel = ({ users, onShowError, SetshowId, reqUserId, setSelected, init
                     <div
                         key={converse._id}
                         onClick={() => {
-                            if(users.data[converse.sender]._id === reqUserId){
-                                handleClick(converse.receiver);
-                            }
-                            else handleClick(converse.sender)
+                            handleClick(otherUserId)
                         }}
                         className="flex items-center gap-4 p-3 rounded hover:bg-gray-100 cursor-pointer transition"
                     >

@@ -315,9 +315,10 @@ const alluserInfo = AsyncHandler(async (req, res) => {
         let JsonData = {};
 
         data.forEach(element => {
-            JsonData[element._id] = {
+            const encryptedId = encrypt(element._id.toString());
+            JsonData[encryptedId] = {
                 ...element.toObject(),
-                _id: encrypt(element._id.toString())  // Encrypt only the value part's _id
+                _id: encryptedId  // Encrypt only the value part's _id
             };
         });
 
@@ -327,35 +328,6 @@ const alluserInfo = AsyncHandler(async (req, res) => {
         throw new ApiError(500, error?.message || "Cannot get info");
     }
 });
-
-
-const getUserPosts = AsyncHandler(async (req, res) => {
-    try {
-        const encryptedId = req.body;
-        const userid = decrypt(encryptedId);
-        const userPosts = await Post.find({ postId: userid });
-
-        const user = await User.findOne({ _id: userid });
-
-        const isLoggedInUser = false;
-        const accessToken = req.cookies?.accessToken || req.header("Authorization")?.replace("Bearer ", "");
-
-        if (!accessToken) isLoggedInUser = false;
-        else {
-            const loggedIn = await User.findOne({ AccessToken: accessToken });
-
-            if (loggedIn._id == userid) isLoggedInUser = true;
-            else isLoggedInUser = false;
-        }
-
-        return res.status(200).json(
-            new ApiResponse(200, { userPosts: userPosts, user: user, isLoggedInUser: isLoggedInUser }, "Posts fetched!!")
-        )
-    } catch (error) {
-        console.log(error);
-        throw new ApiError(500, error?.message || "Could not get User Post")
-    }
-})
 
 // Connection Request and Notification
 
@@ -396,17 +368,19 @@ const sendConnectionRequest = AsyncHandler(async (req, res) => {
             type: 'connection_req'
         });
 
+        // Encrypt user and from fields for frontend
+        const encryptedNotification = {
+            ...notification.toObject(),
+            user: encrypt(notification.user.toString()),
+            from: encrypt(notification.from.toString()),
+        };
+
         // Emit notification
         const io = req.app.get('io');
-        io.to(receiverId).emit('newNotification', {
-            type: 'connection_req',
-            from: senderId,
-            createdAt: notification.createdAt,
-            notificationId: notification._id
-        })
+        io.to(receiverId).emit('newNotification', encryptedNotification);
 
         return res.json(
-            new ApiResponse(200, notification, "Connection request sent!!")
+            new ApiResponse(200, encryptedNotification, "Connection request sent!!")
         )
 
     } catch (error) {
@@ -516,20 +490,17 @@ const showNotifications = AsyncHandler(async (req, res) => {
   
       let notifications = await Notification.find({ user: myId });
   
-      
       notifications.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
   
-      
-    //   const encryptedNotifications = notifications.map((notif) => {
-    //     return {
-    //       ...notif._doc,
-    //       from: encrypt(notif.from.toString()),
-    //       user: encrypt(notif.user.toString())
-    //     };
-    //   });
+      // Encrypt user and from fields for each notification
+      const encryptedNotifications = notifications.map((notif) => ({
+        ...notif.toObject(),
+        user: encrypt(notif.user.toString()),
+        from: encrypt(notif.from.toString()),
+      }));
   
       return res.json(
-        new ApiResponse(200, notifications, "Notifications fetched successfully")
+        new ApiResponse(200, encryptedNotifications, "Notifications fetched successfully")
       );
   
     } catch (error) {
@@ -620,7 +591,6 @@ export {
     aboutUser,
     isloggedin,
     alluserInfo,
-    getUserPosts,
     sendConnectionRequest,
     getUserConnectionStatus,
     AcceptOrRejectConnection,

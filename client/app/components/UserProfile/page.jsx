@@ -18,7 +18,6 @@ const ProfilePage = () => {
   const [feeds, getFeed] = useState([]);
   const [liked, setLiked] = useState(new Map());
   const [userid, setUserid] = useState("");
-  const [thread, SetThread] = useState("");
   const [loggedIn, setLoggedIn] = useState(false);
   const [msg, setMsg] = useState("");
   const [error, setError] = useState("");
@@ -39,10 +38,10 @@ const ProfilePage = () => {
         withCredentials: true,
       });
       const data = response?.data?.data;
-      // console.log(data)
+      console.log(data)
       getUser(data.user);
       setLoggedIn(data.isLoggedInUser);
-      getFeed(data.posts);
+      getFeed(data.encryptedPost);
       setLiked(new Map(Object.entries(data.initialLikes)));
     } catch (error) {
       console.log(error);
@@ -160,7 +159,7 @@ const ProfilePage = () => {
     // decodedId is the profile being viewed (userid state)
     if (loggedInUser && userid) {
       // Navigate to messages page with both user and target parameters
-      window.location.href = `/components/messages?user=${loggedInUser}&target=${userid}`;
+      router.push(`/components/messages?user=${loggedInUser}&target=${userid}`);
     }
   };
 

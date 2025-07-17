@@ -1,7 +1,7 @@
 "use client"
 import React, { useState, useEffect } from "react"
 import axios from "axios";
-import io from 'socket.io-client'
+import socket from '@/app/lib/socket'
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { ChevronUp, ChevronDown, X, UserPlus, MessageCircle, UserCheck } from "lucide-react"
@@ -189,10 +189,6 @@ const Notification = ({ Allusers, onShowError, countofNew }) => {
           getUsers(response);
         }
         await notifications();
-        const socket = io('http://localhost:8080', {
-          withCredentials: true
-        });
-
         socket.on("newNotification", (notification) => {
           getNotRead((prevNotif) => {
             if (prevNotif.some((notif) => notif._id === notification._id)) {
@@ -204,7 +200,6 @@ const Notification = ({ Allusers, onShowError, countofNew }) => {
         // Removed countofNew here
         return () => {
           socket.off('newNotification');
-          socket.disconnect();
         };
       } catch (error) {
         console.error("Failed to initialize notification socket or fetch users:", error);
