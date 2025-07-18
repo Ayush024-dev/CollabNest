@@ -79,6 +79,7 @@ const userSchema= new Schema({
     verifyToken: String,
     verifyTokenExpiry: Date,
     AccessToken: String,
+    lastSeen: { type: Date, default: new Date() }
 
 })
 

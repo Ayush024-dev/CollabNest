@@ -253,9 +253,26 @@ const EditMessage = AsyncHandler(async (req, res) => {
   }
 });
 
+const getLastSeen = AsyncHandler(async (req, res) => {
+  try {
+    const { encryptedId } = req.body;
+    if (!encryptedId) throw new ApiError(400, "User ID is required");
+    const userId = decrypt(encryptedId);
+    const user = await User.findById(userId);
+    if (!user) throw new ApiError(404, "User not found");
+    return res.json(
+      new ApiResponse(200, { lastSeen: user.lastSeen }, "Last seen fetched successfully")
+    );
+  } catch (error) {
+    console.log(error);
+    throw new ApiError(500, error?.message || "Could not fetch last seen");
+  }
+});
+
 export {
   sendMessage,
   getMessage,
   lastConversation,
-  EditMessage
+  EditMessage,
+  getLastSeen
 }

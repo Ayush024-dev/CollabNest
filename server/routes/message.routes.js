@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { verifyJWT } from "../middleware/auth.middleware.js";
 import upload from "../middleware/multer.middleware.js";
-import { EditMessage, getMessage, lastConversation, sendMessage } from "../controllers/message.controller.js";
+import { EditMessage, getLastSeen, getMessage, lastConversation, sendMessage } from "../controllers/message.controller.js";
 
 
 const router=Router();
@@ -26,6 +26,11 @@ router.route("/GetLastConversation").get(
 router.route("/EditMessage").patch(
   verifyJWT,
   EditMessage
+)
+
+router.route("/GetStatus").post(
+  verifyJWT,
+  getLastSeen
 )
 
 export default router;

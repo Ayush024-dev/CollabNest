@@ -107,7 +107,7 @@ const showPosts = AsyncHandler(async (req, res) => {
         // Step 2: Check if request has userId (Profile.jsx case)
         if (req.method === "POST" && req.body && req.body !== "") {
             const { encryptedId } = req.body;
-            console.log("Received encryptedId:", encryptedId);
+            // console.log("Received encryptedId:", encryptedId);
 
             if (!encryptedId) {
                 throw new ApiError(400, "Encrypted user ID is required");
@@ -115,7 +115,7 @@ const showPosts = AsyncHandler(async (req, res) => {
 
             try {
                 decryptedUserId = decrypt(encryptedId);
-                console.log("Decrypted userId:", decryptedUserId);
+                // console.log("Decrypted userId:", decryptedUserId);
             } catch (decryptError) {
                 console.error("Decryption failed:", decryptError);
                 throw new ApiError(400, "Invalid user ID format");

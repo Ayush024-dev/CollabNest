@@ -8,8 +8,10 @@ import InputMessage from "../InputMessage/page";
 import { MoreHorizontal } from "lucide-react";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 
-const RightPanel = ({ users, onShowError, showId, reqUserId })=>{
+const RightPanel = ({ users, onShowError, showId, reqUserId, getStatus, statusMap }) => {
     const [messages, setMessages] = useState([]);
+    const [isOnline, setIsOnline] = useState(false);
+    const [lastSeen, setLastSeen] = useState(null);
     const scrollRef = useRef(null);
     const prevRoomRef = useRef(null);
   
@@ -36,32 +38,70 @@ const RightPanel = ({ users, onShowError, showId, reqUserId })=>{
       scrollRef.current?.scrollIntoView({ behavior: "smooth" });
     }, [messages]);
 
+    // Listen for userOnline/userOffline events and update status in real time
+    useEffect(() => {
+      const handleOnline = ({ userId }) => {
+        if (userId === showId) {
+          setIsOnline(true);
+          setLastSeen(null);
+        }
+      };
+      const handleOffline = ({ userId, timestamp }) => {
+        if (userId === showId) {
+          setIsOnline(false);
+          setLastSeen(timestamp);
+        }
+      };
+      socket.on("userOnline", handleOnline);
+      socket.on("userOffline", handleOffline);
+      return () => {
+        socket.off("userOnline", handleOnline);
+        socket.off("userOffline", handleOffline);
+      };
+    }, [showId]);
+
+    // Update status when showId or statusMap changes
+    useEffect(() => {
+      if (!showId) return;
+      const status = getStatus(showId);
+      if (status === true) {
+        setIsOnline(true);
+        setLastSeen(null);
+      } else if (status) {
+        setIsOnline(false);
+        setLastSeen(status);
+      } else {
+        setIsOnline(false);
+        setLastSeen(null);
+      }
+    }, [showId, statusMap]);
+
     useEffect(() => {
       if (!showId || !reqUserId) return;
       const roomName = [reqUserId, showId].sort().join('-');
       // Leave previous room if any
       if (prevRoomRef.current && prevRoomRef.current !== roomName) {
-        socket.emit('leaveRoom', prevRoomRef.current);
+        socket.emit('leaveRoom', { room: prevRoomRef.current, type: "Chat" });
       }
       // Join new room
-      socket.emit('joinRoom', { roomName, type: "Chat"});
+      socket.emit('joinRoom', { room: roomName, type: "Chat" });
       prevRoomRef.current = roomName;
 
       const handleNewMessage = (msg) => {
         const message = msg.encryptedMsg || msg;
-        console.log("Received message event: ", msg);
-        if(
-          (users.data[message.sender.toString()]?._id === reqUserId && users.data[message.receiver.toString()]?._id === showId) ||
-          (users.data[message.sender.toString()]?._id === showId && users.data[message.receiver.toString()]?._id === reqUserId)
+        // Only add message if it belongs to this chat
+        if (
+          (message.sender === reqUserId && message.receiver === showId) ||
+          (message.sender === showId && message.receiver === reqUserId)
         ) {
-          setMessages((prev) =>[...prev, message]);
+          setMessages((prev) => [...prev, message]);
         }
       };
       socket.on("newMessage", handleNewMessage);
       return () => {
         socket.off("newMessage", handleNewMessage);
       };
-    }, [showId, reqUserId, users]);
+    }, [showId, reqUserId]);
 
     if(!showId) {
       return (
@@ -70,7 +110,6 @@ const RightPanel = ({ users, onShowError, showId, reqUserId })=>{
         </div>
       );
     }
-    console.log(users)
     const receiver = users.data[showId.toString()];
 
     return (
@@ -78,19 +117,26 @@ const RightPanel = ({ users, onShowError, showId, reqUserId })=>{
       {/* Header */}
       <div className="flex items-center gap-4 p-4 border-b shadow-sm bg-white">
         <Avatar className="w-12 h-12">
-          <AvatarImage src={receiver.avatar} />
+          <AvatarImage src={receiver?.avatar} alt={receiver?.name || "User"}/>
           <AvatarFallback>{receiver.name?.[0] || "U"}</AvatarFallback>
         </Avatar>
         <div>
           <h3 className="text-lg font-semibold">{receiver.name}</h3>
           <p className="text-sm text-gray-500">{receiver.institute}</p>
+          <p className="text-xs text-gray-500">
+            {isOnline
+              ? "Online"
+              : lastSeen
+                ? `Last seen: ${new Date(lastSeen).toLocaleString()}`
+                : "Offline"}
+          </p>
         </div>
       </div>
 
       {/* Chat Window */}
       <div className="flex-1 overflow-y-auto px-4 py-2 bg-gray-50 space-y-3">
         {messages.map((msg, index) => {
-          const isSender = users.data[msg.sender.toString()]?._id === reqUserId;
+          const isSender = msg.sender === reqUserId;
           const bubbleColor = isSender ? "bg-yellow-200" : "bg-blue-100";
           const align = isSender ? "justify-end" : "justify-start";
           const textAlign = isSender ? "text-right" : "text-left";
@@ -110,7 +156,7 @@ const RightPanel = ({ users, onShowError, showId, reqUserId })=>{
               {/* Message Bubble with Menu */}
               <div className="relative flex flex-col">
                 {/* Menu at top right */}
-                {msg.sender.toString() === reqUserId && (
+                {msg.sender === reqUserId && (
                   <div className="absolute top-3 right-1 z-10">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>

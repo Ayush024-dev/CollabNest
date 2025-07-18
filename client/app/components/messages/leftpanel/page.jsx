@@ -26,10 +26,6 @@ const LeftPanel = ({ users, onShowError, SetshowId, reqUserId, initialTarget }) 
 
     useEffect(() => {
         getLastConverse();
-        // Join personal room for update_converse events
-        if (reqUserId) {
-          socket.emit('joinRoom', { reqUserId, type: "Personal"});
-        }
         // Real-time update for last conversation
         const handleUpdateConverse = (msg) => {
           const conversation = msg.conversation || msg;

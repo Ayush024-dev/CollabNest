@@ -5,8 +5,8 @@ import RightPanel from "./rightPanel/page"
 import axios from "axios";
 import { Alert } from "@mui/material";
 import ErrorIcon from "@mui/icons-material/Error";
-// import io from "socket.io-client";
-// import { useLocation } from "react-router-dom";
+import socket from "@/app/lib/socket";
+import { useRef } from "react";
 
 const Messages = () => {
   const [error, setError] = useState("");
@@ -15,6 +15,8 @@ const Messages = () => {
   const [reqUserId, setReqUserId] = useState("");
   const [auth, checkAuth] = useState(true);
   const [loading, setloading]=useState(false);
+  const [statusMap, setStatusMap] = useState({}); // { userId: true | timestamp }
+  const statusMapRef = useRef({}); // for async updates
 
 
   // const location = useLocation();
@@ -44,6 +46,52 @@ const Messages = () => {
     setloading(false);
   }, []);
 
+  // Listen for online/offline events once
+  useEffect(() => {
+    const handleOnline = ({ userId }) => {
+      setStatusMap(prev => {
+        const updated = { ...prev, [userId]: true };
+        statusMapRef.current = updated;
+        return updated;
+      });
+    };
+    const handleOffline = ({ userId, timestamp }) => {
+      setStatusMap(prev => {
+        const updated = { ...prev, [userId]: timestamp };
+        statusMapRef.current = updated;
+        return updated;
+      });
+    };
+    socket.on("userOnline", handleOnline);
+    socket.on("userOffline", handleOffline);
+    return () => {
+      socket.off("userOnline", handleOnline);
+      socket.off("userOffline", handleOffline);
+    };
+  }, []);
+
+  // Join/leave personal room for real-time status
+  useEffect(() => {
+    if (reqUserId) {
+      socket.emit('joinRoom', { room: reqUserId, type: "Personal" });
+      return () => {
+        socket.emit('leaveRoom', { room: reqUserId, type: "Personal" });
+      };
+    }
+  }, [reqUserId]);
+
+  // Fetch status for all contacts when users are loaded
+  useEffect(() => {
+    if (users && users.data && reqUserId) {
+      const userIds = Object.keys(users.data).filter(id => id !== reqUserId);
+      userIds.forEach(async (id) => {
+        if (statusMapRef.current[id] === undefined) {
+          await getStatus(id);
+        }
+      });
+    }
+  }, [users, reqUserId]);
+
 
   const fetchUsers = async () => {
     try {
@@ -70,6 +118,31 @@ const Messages = () => {
     setShowId(Id);
   }
 
+  // Helper to get status for a userId
+  const getStatus = async (userId) => {
+    // If status is already in map, return it
+    if (statusMapRef.current[userId] !== undefined) {
+      return statusMapRef.current[userId];
+    }
+    // Otherwise, fetch lastSeen from backend
+    try {
+      const response = await axios.post(
+        "http://localhost:8080/api/v1/message/GetStatus",
+        { encryptedId: userId },
+        { withCredentials: true }
+      );
+      const lastSeen = response.data?.data?.lastSeen || null;
+      setStatusMap(prev => {
+        const updated = { ...prev, [userId]: lastSeen };
+        statusMapRef.current = updated;
+        return updated;
+      });
+      return lastSeen;
+    } catch (e) {
+      return null;
+    }
+  };
+
   useEffect(() => {
     fetchUsers();
   }, []);
@@ -81,6 +154,9 @@ const Messages = () => {
       </div>
     );
   }
+
+  // Synchronous helper to get status for a userId
+  const getStatusSync = (userId) => statusMap[userId];
 
   return (
 
@@ -119,6 +195,8 @@ const Messages = () => {
             onShowError={handleErrorAlert}
             reqUserId={reqUserId}
             showId={showId}
+            getStatus={getStatusSync}
+            statusMap={statusMap}
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center text-gray-400">

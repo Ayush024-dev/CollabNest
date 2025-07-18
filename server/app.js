@@ -5,6 +5,7 @@ import { Server } from "socket.io";
 import { createServer } from "http"
 import LastConversations from "./models/conversation.model.js";
 import { encrypt, decrypt } from "./utils/encryption.js";
+import User from "./models/user.model.js";
 
 
 const app = express();
@@ -44,13 +45,35 @@ io.on("connection", (socket) => {
 
                 if(UserConverse){
                     UserConverse.forEach(contact =>{
+                        let contactId, encryptedContactId;
                         if(contact.sender.toString() === userId) {
-                            io.to(encrypt(contact.receiver.toString())).emit('userOnline',room);
+                            contactId = contact.receiver.toString();
+                        } else {
+                            contactId = contact.sender.toString();
                         }
-                        else {
-                            io.to(encrypt(contact.sender.toString())).emit('userOnline', room);
-                        }
+                        encryptedContactId = encrypt(contactId);
+                        // Always emit as { userId: encryptedUserId }
+                        io.to(encryptedContactId).emit('userOnline', { userId: room });
                     })
+                }
+
+                // NEW: Notify the joining user about all their contacts who are online
+                if(UserConverse){
+                    for (const contact of UserConverse) {
+                        let contactId, encryptedContactId;
+                        if(contact.sender.toString() === userId) {
+                            contactId = contact.receiver.toString();
+                        } else {
+                            contactId = contact.sender.toString();
+                        }
+                        encryptedContactId = encrypt(contactId);
+                        // Check if the contact's personal room has any sockets (i.e., is online)
+                        const socketsInContactRoom = io.sockets.adapter.rooms.get(encryptedContactId);
+                        if (socketsInContactRoom && socketsInContactRoom.size > 0) {
+                            // Notify the joining user that this contact is online
+                            io.to(room).emit('userOnline', { userId: encryptedContactId });
+                        }
+                    }
                 }
             } catch (error) {
                 console.log(error);
@@ -58,9 +81,33 @@ io.on("connection", (socket) => {
         }
     });
 
-    socket.on('leaveRoom', (room) => {
+    
+
+    socket.on('leaveRoom', async ({ room, type }) => {
         socket.leave(room);
         console.log(`Socket ${socket.id} left room ${room}`);
+
+        if (type === "Personal") {
+            try {
+                const userId = decrypt(room);
+                const timestamp = new Date();
+                // Update lastSeen in DB
+                await User.findByIdAndUpdate(userId, { lastSeen: timestamp }); // Assuming User model is available
+                const UserConverse = await LastConversations.find({
+                    $or: [{ sender: userId }, { receiver: userId }]
+                });
+                UserConverse.forEach(contact => {
+                    const contactId = contact.sender.toString() === userId
+                        ? contact.receiver.toString()
+                        : contact.sender.toString();
+                    const encryptedContactId = encrypt(contactId);
+                    // Always emit as { userId: encryptedUserId, timestamp }
+                    io.to(encryptedContactId).emit('userOffline', { userId: room, timestamp });
+                });
+            } catch (e) {
+                console.log(e);
+            }
+        }
     });
 
     socket.on('disconnect', () => {

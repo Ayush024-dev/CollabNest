@@ -55,19 +55,19 @@ const NavBar = ({ profileLink }) => {
                     <div className="navbar flex gap-4 justify-center">
                         <button
                             className="text-white font-inconsolata px-3 py-1 rounded transition duration-150 hover:bg-white hover:text-black"
-                            onClick={() => { window.location.href = '/components/feeds'; }}
+                            onClick={() => { router.push('/components/feeds'); }}
                         >
                             About Us
                         </button>
                         <button
                             className="text-white font-inconsolata px-3 py-1 rounded transition duration-150 hover:bg-white hover:text-black"
-                            onClick={() => { window.location.href = `/components/messages?user=${userid}`; }}
+                            onClick={() => { router.push(`/components/messages?user=${userid}`); }}
                         >
                             Messages
                         </button>
                         <button
                             className="text-white font-inconsolata px-3 py-1 rounded transition duration-150 hover:bg-white hover:text-black"
-                            onClick={() => { window.location.href = `/components/UserProfile?user=${userid}`; }}
+                            onClick={() => { router.push(`/components/UserProfile?user=${userid}`); }}
                         >
                             Profile
                         </button>

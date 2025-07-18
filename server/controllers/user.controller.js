@@ -295,12 +295,12 @@ const isloggedin = AsyncHandler(async (req, res) => {
 
         const user_id = req.userId
 
-        console.log("my id: ", user_id)
+        // console.log("my id: ", user_id)
 
 
         const encryptedId = encrypt(user_id.toString());
 
-        console.log("After encryption: ", encryptedId)
+        // console.log("After encryption: ", encryptedId)
 
         res.status(200).json({ message: true, user_id: encryptedId, user });
     } catch (error) {
