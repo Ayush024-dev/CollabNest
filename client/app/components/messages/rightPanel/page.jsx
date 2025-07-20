@@ -5,7 +5,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 // import socket from "@/lib/socket";
 import socket from "@/app/lib/socket";
 import InputMessage from "../InputMessage/page";
-import { MoreHorizontal } from "lucide-react";
+import { MoreHorizontal, ArrowDown } from "lucide-react";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 
 const RightPanel = ({ users, onShowError, showId, reqUserId, getStatus, statusMap }) => {
@@ -14,6 +14,9 @@ const RightPanel = ({ users, onShowError, showId, reqUserId, getStatus, statusMa
     const [lastSeen, setLastSeen] = useState(null);
     const scrollRef = useRef(null);
     const prevRoomRef = useRef(null);
+    const [showNewMsgIndicator, setShowNewMsgIndicator] = useState(false);
+    const [isAtBottom, setIsAtBottom] = useState(true);
+    const scrollContainerRef = useRef(null);
   
     const fetchMessages = async () => {
       try {
@@ -34,9 +37,44 @@ const RightPanel = ({ users, onShowError, showId, reqUserId, getStatus, statusMa
       fetchMessages();
     }, [showId]);
   
+    // Scroll to bottom instantly when chat is opened (showId changes only)
     useEffect(() => {
-      scrollRef.current?.scrollIntoView({ behavior: "smooth" });
+      if (scrollContainerRef.current) {
+        scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight;
+        setIsAtBottom(true);
+        setShowNewMsgIndicator(false);
+      }
+    }, [showId]);
+
+    // Show indicator if new message arrives and user is not at bottom; scroll if at bottom
+    useEffect(() => {
+      if (!scrollContainerRef.current) return;
+      const container = scrollContainerRef.current;
+      if (isAtBottom) {
+        container.scrollTop = container.scrollHeight;
+        setShowNewMsgIndicator(false);
+      } else {
+        setShowNewMsgIndicator(true);
+      }
     }, [messages]);
+
+    // Track scroll position to update isAtBottom
+    const handleScroll = () => {
+      if (!scrollContainerRef.current) return;
+      const container = scrollContainerRef.current;
+      const atBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 10;
+      setIsAtBottom(atBottom);
+      if (atBottom) setShowNewMsgIndicator(false);
+    };
+
+    // Handler for indicator click
+    const handleScrollToBottom = () => {
+      if (scrollContainerRef.current) {
+        scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight;
+        setIsAtBottom(true);
+        setShowNewMsgIndicator(false);
+      }
+    };
 
     // Listen for userOnline/userOffline events and update status in real time
     useEffect(() => {
@@ -134,7 +172,11 @@ const RightPanel = ({ users, onShowError, showId, reqUserId, getStatus, statusMa
       </div>
 
       {/* Chat Window */}
-      <div className="flex-1 overflow-y-auto px-4 py-2 bg-gray-50 space-y-3">
+      <div
+        ref={scrollContainerRef}
+        className="flex-1 overflow-y-auto px-4 py-2 bg-gray-50 space-y-3 relative"
+        onScroll={handleScroll}
+      >
         {messages.map((msg, index) => {
           const isSender = msg.sender === reqUserId;
           const bubbleColor = isSender ? "bg-yellow-200" : "bg-blue-100";
@@ -219,13 +261,24 @@ const RightPanel = ({ users, onShowError, showId, reqUserId, getStatus, statusMa
           );
         })}
         <div ref={scrollRef} />
+        {/* New message indicator */}
+        {showNewMsgIndicator && (
+          <button
+            onClick={handleScrollToBottom}
+            className="fixed bottom-24 right-12 z-20 bg-emerald-400 hover:bg-emerald-500 text-white p-2 rounded-full shadow-lg flex items-center animate-bounce"
+            style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.15)' }}
+            aria-label="Scroll to latest message"
+          >
+            <ArrowDown className="w-6 h-6" />
+          </button>
+        )}
       </div>
 
       {/* Input Message */}
       <div className="border-t p-4 bg-white">
         <InputMessage
           receiverId={showId}
-          onSend={(msg) => setMessages((prev) => [...prev, msg])}
+          onSend={(msg) => setMessages((prev) => [...prev, { ...msg, sender: reqUserId, receiver: showId }])}
           onShowError={onShowError}
         />
       </div>

@@ -6,11 +6,15 @@ import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { ChevronUp, ChevronDown, X, UserPlus, MessageCircle, UserCheck } from "lucide-react"
 
+import { useRouter } from "next/navigation";
+
 const Notification = ({ Allusers, onShowError, countofNew }) => {
   const [notRead, getNotRead] = useState([]);
   const [Read, getRead] = useState([]);
   const [users, getUsers] = useState([]);
   const [showPrevious, setShowPrevious] = useState(false);
+
+  const router=useRouter();
 
   const notifications = async () => {
     try {
@@ -77,7 +81,7 @@ const Notification = ({ Allusers, onShowError, countofNew }) => {
         return <UserPlus className="w-4 h-4 text-blue-400" />;
       case "connection_accepted":
         return <UserCheck className="w-4 h-4 text-green-400" />;
-      case "new_message":
+      case "message":
         return <MessageCircle className="w-4 h-4 text-purple-400" />;
       default:
         return <UserPlus className="w-4 h-4 text-blue-400" />;
@@ -90,7 +94,7 @@ const Notification = ({ Allusers, onShowError, countofNew }) => {
         return `${sender?.name || 'Someone'} sent you a connection request`;
       case "connection_accepted":
         return `${sender?.name || 'Someone'} accepted your connection request`;
-      case "new_message":
+      case "message":
         return `${sender?.name || 'Someone'} sent you a message`;
       default:
         return `${sender?.name || 'Someone'} sent you a notification`;
@@ -101,9 +105,8 @@ const Notification = ({ Allusers, onShowError, countofNew }) => {
     const sender = users.data?.[notif.from.toString()];
     console.log(sender);
     return (
-      <div className={`p-4 rounded-lg border transition-all duration-200 hover:bg-gray-700/50 ${
-        isRead ? 'bg-gray-800/50 border-gray-700' : 'bg-gray-800 border-gray-600'
-      }`}>
+      <div className={`p-4 rounded-lg border transition-all duration-200 hover:bg-gray-700/50 ${isRead ? 'bg-gray-800/50 border-gray-700' : 'bg-gray-800 border-gray-600'
+        }`}>
         <div className="flex items-start gap-3">
           <Avatar className="w-10 h-10 ring-2 ring-gray-600">
             <AvatarImage src={sender?.avatar} alt={sender?.name} />
@@ -111,7 +114,7 @@ const Notification = ({ Allusers, onShowError, countofNew }) => {
               {sender?.name?.charAt(0) || 'U'}
             </AvatarFallback>
           </Avatar>
-          
+
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-2">
               {getNotificationIcon(notif.type)}
@@ -119,16 +122,16 @@ const Notification = ({ Allusers, onShowError, countofNew }) => {
                 {getNotificationText(notif, sender)}
               </p>
             </div>
-            
+
             {/* Action buttons for unread connection requests */}
             {!isRead && notif.type === "connection_req" && !notif.__decision && (
               <div className="flex gap-2 mt-3">
                 <Button
                   size="sm"
                   className="bg-green-600 hover:bg-green-700 text-white"
-                  onClick={() => handleDecision({ 
-                    encryptedId: sender._id, 
-                    type: "Accept", 
+                  onClick={() => handleDecision({
+                    encryptedId: sender._id,
+                    type: "Accept",
                     notification_id: notif._id
                   })}
                 >
@@ -138,28 +141,57 @@ const Notification = ({ Allusers, onShowError, countofNew }) => {
                   size="sm"
                   variant="ghost"
                   className="border border-gray-600 text-gray-300 hover:bg-gray-700"
-                  onClick={() => handleDecision({ 
-                    encryptedId: sender._id, 
-                    type: "Reject", 
-                    notification_id: notif._id 
+                  onClick={() => handleDecision({
+                    encryptedId: sender._id,
+                    type: "Reject",
+                    notification_id: notif._id
                   })}
                 >
                   Reject
                 </Button>
               </div>
             )}
-            
+
             {/* Decision status */}
             {notif.__decision && (
-              <p className={`text-sm font-medium mt-2 ${
-                notif.__decision === 'Accept' ? 'text-green-400' : 'text-red-400'
-              }`}>
+              <p className={`text-sm font-medium mt-2 ${notif.__decision === 'Accept' ? 'text-green-400' : 'text-red-400'
+                }`}>
                 {notif.__decision}ed
               </p>
             )}
-            
+
+            {/* Read button for message notification */}
+            {!isRead && notif.type === "message" && (
+              <div className="flex items-start gap-3">
+                <Button
+                  size="sm"
+                  className="bg-green-600 hover:bg-green-700 text-white mt-3"
+                  onClick={() => handleRead(notif)}
+                >
+                  Mark as Read
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="border border-gray-600 text-gray-300 hover:bg-gray-700"
+                  onClick={() => {
+                    const loggedInUser = localStorage.getItem("user");
+
+                    if(loggedInUser && sender._id){
+                      router.push(`/components/messages?user=${loggedInUser}&target=${sender._id}`);
+                    }
+                    handleRead(notif);
+                  }}
+                >
+                  Read Message
+                </Button>
+              </div>
+
+
+            )}
+
             {/* Read button for other notifications */}
-            {!isRead && notif.type !== "connection_req" && (
+            {!isRead && notif.type !== "connection_req" && notif.type !== "message" && (
               <Button
                 size="sm"
                 className="bg-green-600 hover:bg-green-700 text-white mt-3"
@@ -211,10 +243,10 @@ const Notification = ({ Allusers, onShowError, countofNew }) => {
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
       <div className="bg-gray-900 border border-gray-700 rounded-xl shadow-2xl w-[66vw] h-[66vh] flex flex-col overflow-hidden">
-        
+
         {/* Main Content Area */}
         <div className="flex-1 flex flex-col">
-          
+
           {/* New Notifications View */}
           <div className={`flex-1 flex flex-col transition-all duration-300 ${showPrevious ? 'hidden' : 'block'}`}>
             {/* Header */}
@@ -224,7 +256,7 @@ const Notification = ({ Allusers, onShowError, countofNew }) => {
                 <p className="text-sm text-gray-400 mt-1">{notRead.length} unread notification{notRead.length !== 1 ? 's' : ''}</p>
               )}
             </div>
-            
+
             {/* Notifications List */}
             <div className="flex-1 overflow-y-auto p-6 space-y-4">
               {notRead.length === 0 ? (
@@ -242,7 +274,7 @@ const Notification = ({ Allusers, onShowError, countofNew }) => {
               )}
             </div>
           </div>
-          
+
           {/* Previous Notifications View */}
           <div className={`flex-1 flex flex-col transition-all duration-300 ${showPrevious ? 'block' : 'hidden'}`}>
             {/* Header */}
@@ -252,7 +284,7 @@ const Notification = ({ Allusers, onShowError, countofNew }) => {
                 <p className="text-sm text-gray-400 mt-1">{Read.length} read notification{Read.length !== 1 ? 's' : ''}</p>
               )}
             </div>
-            
+
             {/* Notifications List */}
             <div className="flex-1 overflow-y-auto p-6 space-y-4">
               {Read.length === 0 ? (
@@ -271,7 +303,7 @@ const Notification = ({ Allusers, onShowError, countofNew }) => {
             </div>
           </div>
         </div>
-        
+
         {/* Accordion Toggle */}
         <div className="border-t border-gray-700">
           <Button

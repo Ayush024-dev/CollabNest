@@ -1,6 +1,7 @@
 import Message from "../models/messages.model.js";
 import LastConversations from "../models/conversation.model.js";
 import User from "../models/user.model.js";
+import Notification from "../models/notification.model.js";
 
 import { ApiResponse } from "../utils/ApirResponse.js";
 import { ApiError } from "../utils/ApiError.js";
@@ -123,6 +124,25 @@ const sendMessage = AsyncHandler(async (req, res) => {
         updatedAt: message.updatedAt || new Date().toISOString(),
       }
     });
+
+    // Message notification logic
+    const encryptedReceiverId = encrypt(receiverId.toString());
+    const socketsInReceiverRoom = io.sockets.adapter.rooms.get(encryptedReceiverId);
+    if (!socketsInReceiverRoom || socketsInReceiverRoom.size === 0) {
+      // Receiver is not online, create notification
+      const notification = await Notification.create({
+        user: receiverId,
+        from: senderId,
+        type: 'message',
+      });
+      // Encrypt user and from fields for frontend
+      const encryptedNotification = {
+        ...notification.toObject(),
+        user: encrypt(notification.user.toString()),
+        from: encrypt(notification.from.toString()),
+      };
+      io.to(encryptedReceiverId).emit('newNotification', encryptedNotification);
+    }
 
     return res
       .status(201)
