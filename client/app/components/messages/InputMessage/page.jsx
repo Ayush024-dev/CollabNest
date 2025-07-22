@@ -88,7 +88,7 @@ const InputMessage = ({ receiverId, onSend, onShowError, replyToMsg, clearReplyT
     <div className="flex flex-col w-full">
       {/* Reply snippet above input */}
       {replyToMsg && (
-        <div className="flex items-center bg-gray-100 border-l-4 border-blue-400 px-2 py-1 mb-1 text-xs relative">
+        <div className="flex items-center bg-gray-100 border-l-4 border-blue-400 px-2 py-2 mb-1 text-xs relative">
           <span className="font-semibold text-blue-600 mr-2">Replying to:</span>
           <span>
             {replyToMsg.type === "image" && "[Image]"}

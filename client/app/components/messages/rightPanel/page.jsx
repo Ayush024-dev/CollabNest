@@ -245,7 +245,8 @@ const RightPanel = ({ users, onShowError, showId, reqUserId, getStatus, statusMa
                 if (original.type === "emoji") preview = original.content;
                 return (
                   <div
-                    className="text-xs bg-gray-100 border-l-4 border-blue-400 pl-2 mb-1 cursor-pointer hover:bg-blue-50 transition"
+                    className="text-xs bg-gray-100 border-l-4 border-blue-400 pl-2 mb-2 py-2 cursor-pointer hover:bg-blue-50 transition"
+                    style={{ fontSize: '0.95rem' }}
                     onClick={() => {
                       const el = document.getElementById(original._id);
                       if (el) {

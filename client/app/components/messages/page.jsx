@@ -7,6 +7,7 @@ import { Alert } from "@mui/material";
 import ErrorIcon from "@mui/icons-material/Error";
 import socket from "@/app/lib/socket";
 import { useRef } from "react";
+import { useSearchParams } from 'next/navigation';
 
 const Messages = () => {
   const [error, setError] = useState("");
@@ -17,6 +18,7 @@ const Messages = () => {
   const [loading, setloading]=useState(false);
   const [statusMap, setStatusMap] = useState({}); // { userId: true | timestamp }
   const statusMapRef = useRef({}); // for async updates
+  const searchParams = useSearchParams();
 
 
   // const location = useLocation();
@@ -45,6 +47,15 @@ const Messages = () => {
 
     setloading(false);
   }, []);
+
+  // NEW: Listen for changes in the URL's target param and update showId
+  useEffect(() => {
+    const targetParam = searchParams.get("target");
+    if (targetParam) {
+      const decodedTarget = decodeURIComponent(targetParam).replace(/ /g, "+");
+      setShowId(decodedTarget);
+    }
+  }, [searchParams]);
 
   // Listen for online/offline events once
   useEffect(() => {
