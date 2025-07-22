@@ -266,7 +266,7 @@ const EditMessage = AsyncHandler(async (req, res) => {
 
     const myId=req.userId;
 
-    if(message.sender !== myId){
+    if(message.sender.toString() !== myId.toString()){
       throw new ApiError(403, "You are not allowed to edit this message");
     }
 
@@ -456,7 +456,7 @@ const DeleteMessageForEveryone = AsyncHandler(async (req, res) => {
       throw new ApiError(404, "Message not found");
     }
 
-    if(message.sender !== myId){
+    if(message.sender.toString() !== myId.toString()){
       throw new ApiError(403, "You are not allowed to delete this message");
     }
 

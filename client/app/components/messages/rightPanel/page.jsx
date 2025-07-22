@@ -19,6 +19,7 @@ const RightPanel = ({ users, onShowError, showId, reqUserId, getStatus, statusMa
     const scrollContainerRef = useRef(null);
     const [editingMsgId, setEditingMsgId] = useState(null);
     const [editContent, setEditContent] = useState("");
+    const [replyToMsg, setReplyToMsg] = useState(null); // New state for reply
   
     const fetchMessages = async () => {
       try {
@@ -210,6 +211,7 @@ const RightPanel = ({ users, onShowError, showId, reqUserId, getStatus, statusMa
         onScroll={handleScroll}
       >
         {messages.map((msg, index) => {
+          // console.log(msg.type);
           const isSender = msg.sender === reqUserId;
           const bubbleColor = isSender ? "bg-yellow-200" : "bg-blue-100";
           const align = isSender ? "justify-end" : "justify-start";
@@ -220,6 +222,46 @@ const RightPanel = ({ users, onShowError, showId, reqUserId, getStatus, statusMa
 
           // WhatsApp-style edit UI
           const isEditing = editingMsgId === msg._id;
+
+          // Helper: If this is the last message
+          const isLastMessage = index === messages.length - 1;
+
+          // Handler to scroll to bottom after media loads
+          const handleMediaLoad = () => {
+            if (scrollContainerRef.current && isAtBottom) {
+              scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight;
+            }
+          };
+
+          // Helper: If this message is being replied to by another message
+          const replySnippet = msg.replyTo
+            ? (() => {
+                const original = messages.find(m => m._id === msg.replyTo);
+                if (!original) return <div className="text-xs italic text-gray-400 border-l-4 border-gray-300 pl-2 mb-1">Original message not found</div>;
+                let preview = original.content;
+                if (original.type === "image") preview = "[Image]";
+                if (original.type === "video") preview = "[Video]";
+                if (original.type === "file") preview = original.content ? original.content : "[File]";
+                if (original.type === "emoji") preview = original.content;
+                return (
+                  <div
+                    className="text-xs bg-gray-100 border-l-4 border-blue-400 pl-2 mb-1 cursor-pointer hover:bg-blue-50 transition"
+                    onClick={() => {
+                      const el = document.getElementById(original._id);
+                      if (el) {
+                        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        el.classList.add('ring-2', 'ring-blue-400', 'transition');
+                        setTimeout(() => {
+                          el.classList.remove('ring-2', 'ring-blue-400', 'transition');
+                        }, 1200);
+                      }
+                    }}
+                  >
+                    <span className="font-semibold text-blue-600">Replying to:</span> {preview}
+                  </div>
+                );
+              })()
+            : null;
 
           return (
             <div key={index} className={`flex ${align} items-end gap-2`}>
@@ -242,10 +284,14 @@ const RightPanel = ({ users, onShowError, showId, reqUserId, getStatus, statusMa
                         </button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => {
-                          setEditingMsgId(msg._id.toString());
-                          setEditContent(msg.content);
-                        }}>Edit</DropdownMenuItem>
+                        {(msg.type === "text" || msg.type === "emoji") && (
+                          <DropdownMenuItem onClick={() => {
+                            setEditingMsgId(msg._id.toString());
+                            setEditContent(msg.content);
+                          }}>
+                            Edit
+                          </DropdownMenuItem>
+                        )}
                         <DropdownMenuItem onClick={async () => {
                           try {
                             const roomName = [reqUserId, showId].sort().join('-');
@@ -284,7 +330,9 @@ const RightPanel = ({ users, onShowError, showId, reqUserId, getStatus, statusMa
                             onShowError(err?.response?.data?.message || "Failed to delete message for everyone");
                           }
                         }}>Delete for everyone</DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => {/* TODO: Reply logic */}}>Reply</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => {
+                          setReplyToMsg(msg); // Set reply target
+                        }}>Reply</DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>
@@ -315,13 +363,17 @@ const RightPanel = ({ users, onShowError, showId, reqUserId, getStatus, statusMa
                           onShowError(err?.response?.data?.message || "Failed to delete message");
                         }
                       }}>Delete for me</DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => {/* TODO: Reply logic */}}>Reply</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => {
+                        setReplyToMsg(msg); // Set reply target
+                      }}>Reply</DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
                 )}
                 {/* Message Bubble */}
-                <div className={`max-w-sm px-4 py-2 rounded-lg shadow ${bubbleColor} ${textAlign} mt-4`} style={{ minWidth: '4rem' }}>
+                <div id={msg._id} className={`max-w-sm px-4 py-2 rounded-lg shadow ${bubbleColor} ${textAlign} mt-4`} style={{ minWidth: '4rem' }}>
+                  {/* Reply snippet if this message is a reply */}
+                  {replySnippet}
                   {isEditing ? (
                     <form
                       onSubmit={async (e) => {
@@ -367,7 +419,7 @@ const RightPanel = ({ users, onShowError, showId, reqUserId, getStatus, statusMa
                       {msg.type === "emoji" && <p className="text-3xl">{msg.content}</p>}
                       {msg.type === "image" && (
                         <div className="flex flex-col items-start">
-                          <img src={msg.fileUrl} alt="image" className="rounded-md w-64" />
+                          <img src={msg.fileUrl} alt="image" className="rounded-md w-64" onLoad={isLastMessage ? handleMediaLoad : undefined} />
                           {msg.content && (
                             <span className="mt-1 text-sm text-gray-700">{msg.content}</span>
                           )}
@@ -375,7 +427,7 @@ const RightPanel = ({ users, onShowError, showId, reqUserId, getStatus, statusMa
                       )}
                       {msg.type === "file" && (
                         <div className="flex flex-col items-start">
-                          <a href={msg.fileUrl} download className="underline text-blue-600">
+                          <a href={msg.fileUrl} download className="underline text-blue-600" onLoad={isLastMessage ? handleMediaLoad : undefined}>
                             Download File
                           </a>
                           {msg.content && (
@@ -385,7 +437,7 @@ const RightPanel = ({ users, onShowError, showId, reqUserId, getStatus, statusMa
                       )}
                       {msg.type === "video" && (
                         <div className="flex flex-col items-start">
-                          <video src={msg.fileUrl} controls className="w-64 rounded-md" />
+                          <video src={msg.fileUrl} controls className="w-64 rounded-md" onLoadedData={isLastMessage ? handleMediaLoad : undefined} />
                           {msg.content && (
                             <span className="mt-1 text-sm text-gray-700">{msg.content}</span>
                           )}
@@ -429,6 +481,8 @@ const RightPanel = ({ users, onShowError, showId, reqUserId, getStatus, statusMa
           receiverId={showId}
           onSend={(msg) => setMessages((prev) => [...prev, { ...msg, sender: reqUserId, receiver: showId }])}
           onShowError={onShowError}
+          replyToMsg={replyToMsg}
+          clearReplyToMsg={() => setReplyToMsg(null)}
         />
       </div>
     </div>
