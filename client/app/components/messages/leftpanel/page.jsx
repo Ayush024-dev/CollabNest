@@ -62,8 +62,42 @@ const LeftPanel = ({ users, onShowError, SetshowId, reqUserId, initialTarget }) 
           }
         };
         socket.on("update_converse", handleUpdateConverse);
+        // Listen for edit_converse event
+        const handleEditConverse = (msg) => {
+          const { conversationId, lastMessage } = msg;
+          setConversations((prev) => prev.map(convo =>
+            convo._id === conversationId
+              ? {
+                  ...convo,
+                  lastMessage: {
+                    ...convo.lastMessage,
+                    ...lastMessage,
+                  },
+                  updatedAt: new Date().toISOString(),
+                }
+              : convo
+          ));
+        };
+        socket.on("edit_converse", handleEditConverse);
+        // Listen for delete_converse event (delete for me and for everyone)
+        const handleDeleteConverse = (msg) => {
+          const convoObj = msg.myConvo || msg.convo;
+          if (!convoObj) return;
+          setConversations((prev) => prev.map(convo =>
+            convo._id === convoObj._id
+              ? {
+                  ...convo,
+                  lastMessage: convoObj.lastMessage,
+                  updatedAt: convoObj.updatedAt || new Date().toISOString(),
+                }
+              : convo
+          ));
+        };
+        socket.on("delete_converse", handleDeleteConverse);
         return () => {
           socket.off("update_converse", handleUpdateConverse);
+          socket.off("edit_converse", handleEditConverse);
+          socket.off("delete_converse", handleDeleteConverse);
         };
     }, []);
 

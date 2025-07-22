@@ -1,27 +1,42 @@
 import mongoose from "mongoose";
 
-const conversationSchema= new mongoose.Schema({
-    sender:{
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "User",
-        required: true,
+const userConversationSchema = new mongoose.Schema({
+  owner: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
+  },
+  sender: { 
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
+    required: true,
+  },
+  receiver: { 
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
+    required: true,
+  },
+  lastMessage: {
+    messageId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Message",
+      required: true
     },
-    receiver:{
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "User",
-        required: true,
+    content: String,
+    type: {
+      type: String,
+      enum: ["text", "image", "video", "file", "emoji"],
     },
-    lastMessage: {
-        content: { type: String },
-        fileUrl: { type: String },
-        type: {
-          type: String,
-          enum: ["text", "image", "video", "file", "emoji"],
-        },
-        read: { type: Boolean, default: false }, 
-      }
-}, {timestamps:true})
+    fileUrl: String,
+    timestamp: Date,
+    read: { type: Boolean, default: false }
+  }
+}, { timestamps: true });
 
-const LastConversations= mongoose.model("Conversation", conversationSchema)
+userConversationSchema.index({ sender: 1, receiver: 1, owner: 1 }, { unique: true }); 
+userConversationSchema.index({ owner: 1 });
 
-export default LastConversations
+
+const UserConversation = mongoose.model("UserConversation", userConversationSchema);
+
+export default UserConversation;

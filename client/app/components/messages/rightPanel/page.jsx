@@ -17,6 +17,8 @@ const RightPanel = ({ users, onShowError, showId, reqUserId, getStatus, statusMa
     const [showNewMsgIndicator, setShowNewMsgIndicator] = useState(false);
     const [isAtBottom, setIsAtBottom] = useState(true);
     const scrollContainerRef = useRef(null);
+    const [editingMsgId, setEditingMsgId] = useState(null);
+    const [editContent, setEditContent] = useState("");
   
     const fetchMessages = async () => {
       try {
@@ -141,6 +143,36 @@ const RightPanel = ({ users, onShowError, showId, reqUserId, getStatus, statusMa
       };
     }, [showId, reqUserId]);
 
+    // Listen for messageEdited event
+    useEffect(() => {
+      const handleMessageEdited = ({ messageId, newContent, timestamp }) => {
+        setMessages((prevMsgs) =>
+          prevMsgs.map((msg) =>
+            msg._id === messageId
+              ? { ...msg, content: newContent, updatedAt: timestamp, edited: true }
+              : msg
+          )
+        );
+      };
+      socket.on("messageEdited", handleMessageEdited);
+      return () => {
+        socket.off("messageEdited", handleMessageEdited);
+      };
+    }, []);
+
+    // Listen for delete_message event (delete for me and for everyone)
+    useEffect(() => {
+      const handleDeleteMessage = ({ messageId, type }) => {
+        if (type === "delete_for_me" || type === "delete_for_everyone") {
+          setMessages((prevMsgs) => prevMsgs.filter((msg) => msg._id !== messageId));
+        }
+      };
+      socket.on("delete_message", handleDeleteMessage);
+      return () => {
+        socket.off("delete_message", handleDeleteMessage);
+      };
+    }, []);
+
     if(!showId) {
       return (
         <div className="flex-1 flex items-center justify-center text-gray-400">
@@ -186,6 +218,9 @@ const RightPanel = ({ users, onShowError, showId, reqUserId, getStatus, statusMa
           const time = msg.updatedAt ? new Date(msg.updatedAt) : (msg.timestamp ? new Date(msg.timestamp) : null);
           const formattedTime = time ? time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "";
 
+          // WhatsApp-style edit UI
+          const isEditing = editingMsgId === msg._id;
+
           return (
             <div key={index} className={`flex ${align} items-end gap-2`}>
               {/* Avatar */}
@@ -198,7 +233,7 @@ const RightPanel = ({ users, onShowError, showId, reqUserId, getStatus, statusMa
               {/* Message Bubble with Menu */}
               <div className="relative flex flex-col">
                 {/* Menu at top right */}
-                {msg.sender === reqUserId && (
+                {msg.sender === reqUserId && !isEditing && (
                   <div className="absolute top-3 right-1 z-10">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -207,42 +242,156 @@ const RightPanel = ({ users, onShowError, showId, reqUserId, getStatus, statusMa
                         </button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => {/* TODO: Edit logic */}}>Edit</DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => {/* TODO: Delete logic */}}>Delete</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => {
+                          setEditingMsgId(msg._id.toString());
+                          setEditContent(msg.content);
+                        }}>Edit</DropdownMenuItem>
+                        <DropdownMenuItem onClick={async () => {
+                          try {
+                            const roomName = [reqUserId, showId].sort().join('-');
+                            await axios.patch(
+                              "http://localhost:8080/api/v1/message/DeleteMessageForMe",
+                              {
+                                messageId: msg._id,
+                                type: "delete_for_me",
+                                roomName,
+                              },
+                              { withCredentials: true }
+                            );
+                            // Optimistically remove the message for the current user
+                            setMessages((prevMsgs) => prevMsgs.filter((m) => m._id !== msg._id));
+                          } catch (err) {
+                            onShowError(err?.response?.data?.message || "Failed to delete message");
+                          }
+                        }}>Delete for me</DropdownMenuItem>
+                        <DropdownMenuItem onClick={async () => {
+                          try {
+                            const roomName = [reqUserId, showId].sort().join('-');
+                            await axios.delete(
+                              "http://localhost:8080/api/v1/message/DeleteMessageForEveryone",
+                              {
+                                data: {
+                                  messageId: msg._id,
+                                  type: "delete_for_everyone",
+                                  roomName,
+                                },
+                                withCredentials: true
+                              }
+                            );
+                            // Optimistically remove the message for both users
+                            setMessages((prevMsgs) => prevMsgs.filter((m) => m._id !== msg._id));
+                          } catch (err) {
+                            onShowError(err?.response?.data?.message || "Failed to delete message for everyone");
+                          }
+                        }}>Delete for everyone</DropdownMenuItem>
                         <DropdownMenuItem onClick={() => {/* TODO: Reply logic */}}>Reply</DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>
                 )}
+                {msg.sender !== reqUserId && (
+                  <div className="absolute top-3 right-1 z-10">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button className="p-1 rounded-full hover:bg-gray-200 focus:outline-none">
+                        <MoreHorizontal className="w-4 h-4 text-gray-500" />
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={async () => {
+                        try {
+                          const roomName = [reqUserId, showId].sort().join('-');
+                          await axios.patch(
+                            "http://localhost:8080/api/v1/message/DeleteMessageForMe",
+                            {
+                              messageId: msg._id,
+                              type: "delete_for_me",
+                              roomName,
+                            },
+                            { withCredentials: true }
+                          );
+                          setMessages((prevMsgs) => prevMsgs.filter((m) => m._id !== msg._id));
+                        } catch (err) {
+                          onShowError(err?.response?.data?.message || "Failed to delete message");
+                        }
+                      }}>Delete for me</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => {/* TODO: Reply logic */}}>Reply</DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+                )}
                 {/* Message Bubble */}
                 <div className={`max-w-sm px-4 py-2 rounded-lg shadow ${bubbleColor} ${textAlign} mt-4`} style={{ minWidth: '4rem' }}>
-                  {msg.type === "text" && <p>{msg.content}</p>}
-                  {msg.type === "emoji" && <p className="text-3xl">{msg.content}</p>}
-                  {msg.type === "image" && (
-                    <div className="flex flex-col items-start">
-                      <img src={msg.fileUrl} alt="image" className="rounded-md w-64" />
-                      {msg.content && (
-                        <span className="mt-1 text-sm text-gray-700">{msg.content}</span>
+                  {isEditing ? (
+                    <form
+                      onSubmit={async (e) => {
+                        e.preventDefault();
+                        if (!editContent.trim()) return;
+                        try {
+                          const roomName = [reqUserId, showId].sort().join('-');
+                          await axios.patch(
+                            "http://localhost:8080/api/v1/message/EditMessage",
+                            {
+                              messageId: msg._id,
+                              newContent: editContent,
+                              roomName,
+                            },
+                            { withCredentials: true }
+                          );
+                          setEditingMsgId(null);
+                          setEditContent("");
+                        } catch (err) {
+                          onShowError(err?.response?.data?.message || "Failed to edit message");
+                        }
+                      }}
+                      className="flex items-center gap-2"
+                    >
+                      <input
+                        className="flex-1 border rounded px-2 py-1 text-sm"
+                        value={editContent}
+                        autoFocus
+                        onChange={e => setEditContent(e.target.value)}
+                        onKeyDown={e => {
+                          if (e.key === "Escape") {
+                            setEditingMsgId(null);
+                            setEditContent("");
+                          }
+                        }}
+                      />
+                      <button type="submit" className="text-blue-600 font-semibold">Save</button>
+                      <button type="button" className="text-gray-500" onClick={() => { setEditingMsgId(null); setEditContent(""); }}>Cancel</button>
+                    </form>
+                  ) : (
+                    <>
+                      {msg.type === "text" && <p>{msg.content}{msg.edited && <span className="text-xs text-gray-500 ml-1">(edited)</span>}</p>}
+                      {msg.type === "emoji" && <p className="text-3xl">{msg.content}</p>}
+                      {msg.type === "image" && (
+                        <div className="flex flex-col items-start">
+                          <img src={msg.fileUrl} alt="image" className="rounded-md w-64" />
+                          {msg.content && (
+                            <span className="mt-1 text-sm text-gray-700">{msg.content}</span>
+                          )}
+                        </div>
                       )}
-                    </div>
-                  )}
-                  {msg.type === "file" && (
-                    <div className="flex flex-col items-start">
-                      <a href={msg.fileUrl} download className="underline text-blue-600">
-                        Download File
-                      </a>
-                      {msg.content && (
-                        <span className="mt-1 text-sm text-gray-700">{msg.content}</span>
+                      {msg.type === "file" && (
+                        <div className="flex flex-col items-start">
+                          <a href={msg.fileUrl} download className="underline text-blue-600">
+                            Download File
+                          </a>
+                          {msg.content && (
+                            <span className="mt-1 text-sm text-gray-700">{msg.content}</span>
+                          )}
+                        </div>
                       )}
-                    </div>
-                  )}
-                  {msg.type === "video" && (
-                    <div className="flex flex-col items-start">
-                      <video src={msg.fileUrl} controls className="w-64 rounded-md" />
-                      {msg.content && (
-                        <span className="mt-1 text-sm text-gray-700">{msg.content}</span>
+                      {msg.type === "video" && (
+                        <div className="flex flex-col items-start">
+                          <video src={msg.fileUrl} controls className="w-64 rounded-md" />
+                          {msg.content && (
+                            <span className="mt-1 text-sm text-gray-700">{msg.content}</span>
+                          )}
+                        </div>
                       )}
-                    </div>
+                    </>
                   )}
                   {/* Message Time */}
                   <div className="flex justify-end mt-1">
