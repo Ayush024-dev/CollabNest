@@ -59,29 +59,37 @@ const SearchBar = ({ users, onShowError, reqUserId }) => {
   };
 
   return (
-    <div className="relative w-full">
+    <div className="relative w-full mb-4">
       <input
         type="text"
         value={searchTerm}
         onChange={handleInputChange}
         placeholder="Search contacts..."
-        className="w-full px-3 py-2 border rounded focus:outline-none"
+        className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-slate-200 rounded-xl focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all duration-200 text-sm sm:text-base placeholder-slate-400 bg-white shadow-sm hover:shadow-md"
         disabled={loading}
       />
       {suggestions.length > 0 && (
-        <ul className="absolute left-0 right-0 bg-white border rounded shadow z-10 mt-1 max-h-60 overflow-y-auto">
+        <ul className="absolute left-0 right-0 bg-white border border-slate-200 rounded-xl shadow-lg z-10 mt-2 max-h-60 overflow-y-auto custom-scrollbar">
           {suggestions.map((suggestion) => (
             <li
               key={suggestion.user_id}
-              className="flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-gray-100"
+              className="flex items-center gap-3 px-3 sm:px-4 py-2 sm:py-3 cursor-pointer hover:bg-slate-50 transition-colors duration-200 first:rounded-t-xl last:rounded-b-xl border-b border-slate-100 last:border-b-0"
               onClick={() => handleSuggestionClick(suggestion)}
             >
               <img
                 src={suggestion.avatar || "/assets/img/profile-user.png"}
                 alt={suggestion.name}
-                className="w-8 h-8 rounded-full object-cover"
+                className="w-8 h-8 sm:w-10 sm:h-10 rounded-full object-cover ring-2 ring-slate-200"
               />
-              <span>{suggestion.name}</span>
+              <span className="text-sm sm:text-base text-slate-700 font-medium">{suggestion.name}</span>
+              {loading && (
+                <div className="ml-auto">
+                  <svg className="animate-spin h-4 w-4 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+                  </svg>
+                </div>
+              )}
             </li>
           ))}
         </ul>

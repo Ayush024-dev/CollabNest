@@ -6,7 +6,7 @@ import { Image, Video, FilesIcon } from "lucide-react";
 import SearchBar from "./SearchBar/page";
 import socket from "@/app/lib/socket";
 
-const LeftPanel = ({ users, onShowError, SetshowId, reqUserId, initialTarget }) => {
+const LeftPanel = ({ users, onShowError, SetshowId, reqUserId, initialTarget, showId }) => {
     const [conversations, setConversations] = useState([]);
 
     const getLastConverse = async () => {
@@ -149,12 +149,13 @@ const LeftPanel = ({ users, onShowError, SetshowId, reqUserId, initialTarget }) 
     };
 
     return (
-        <div className="w-full h-full px-4 py-2 overflow-y-auto space-y-4">
+        <div className="w-full h-full px-3 sm:px-4 py-3 overflow-y-auto space-y-2 bg-gradient-to-b from-slate-50 to-slate-100">
             <SearchBar users={users} onShowError={onShowError} reqUserId={reqUserId} />
             {displayConversations.map((converse) => {
                 const otherUserId = (converse.sender!= reqUserId)? converse.sender : converse.receiver; 
                 const user = users.data[otherUserId];
                 const lastMessage = converse?.lastMessage;
+                const isSelected = showId === otherUserId;
 
                 return (
                     <div
@@ -162,46 +163,60 @@ const LeftPanel = ({ users, onShowError, SetshowId, reqUserId, initialTarget }) 
                         onClick={() => {
                             handleClick(otherUserId)
                         }}
-                        className="flex items-center gap-4 p-3 rounded hover:bg-gray-100 cursor-pointer transition"
+                        className={`flex items-center gap-3 sm:gap-4 p-3 rounded-xl cursor-pointer transition-all duration-200 border ${
+                            isSelected 
+                                ? 'bg-blue-50 border-blue-200 shadow-md ring-1 ring-blue-100' 
+                                : 'bg-white border-slate-200 hover:bg-slate-50 hover:border-slate-300 hover:shadow-sm'
+                        }`}
                     >
-                        <Avatar className="w-12 h-12 ring-2 ring-gray-600">
+                        <Avatar className={`w-10 h-10 sm:w-12 sm:h-12 ring-2 transition-all duration-200 ${
+                            isSelected ? 'ring-blue-400' : 'ring-slate-300'
+                        }`}>
                             <AvatarImage
                                 src={user?.avatar}
                                 alt={user?.name || "User"}
                             />
-                            <AvatarFallback className="bg-gray-700 text-gray-200">
+                            <AvatarFallback className={`text-white font-semibold ${
+                                isSelected ? 'bg-blue-500' : 'bg-slate-500'
+                            }`}>
                                 {user?.name?.charAt(0) || "U"}
                             </AvatarFallback>
                         </Avatar>
 
                         <div className="flex-1 min-w-0">
                             <div className="flex justify-between items-center">
-                                <h3 className="font-semibold text-base truncate">{user?.name || "Unknown User"}</h3>
-                                <span className="text-xs text-gray-500">
+                                <h3 className={`font-semibold text-sm sm:text-base truncate ${
+                                    isSelected ? 'text-blue-900' : 'text-slate-800'
+                                }`}>{user?.name || "Unknown User"}</h3>
+                                <span className={`text-xs ${
+                                    isSelected ? 'text-blue-600' : 'text-slate-500'
+                                }`}>
                                     {formatTimeOrDate(converse.updatedAt)}
                                 </span>
                             </div>
-                            <p className="text-sm text-gray-600 truncate flex items-center gap-1">
+                            <p className={`text-xs sm:text-sm truncate flex items-center gap-1 ${
+                                isSelected ? 'text-blue-700' : 'text-slate-600'
+                            }`}>
                                 {lastMessage?.type === "text" && lastMessage.content}
 
                                 {lastMessage?.type === "image" && (
                                     <>
                                         <span>[Image]</span>
-                                        <Image className="w-4 h-4 inline-block" />
+                                        <Image className="w-3 h-3 sm:w-4 sm:h-4 inline-block" />
                                     </>
                                 )}
 
                                 {lastMessage?.type === "file" && (
                                     <>
                                         <span>[File]</span>
-                                        <FilesIcon className="w-4 h-4 inline-block" />
+                                        <FilesIcon className="w-3 h-3 sm:w-4 sm:h-4 inline-block" />
                                     </>
                                 )}
 
                                 {lastMessage?.type === "video" && (
                                     <>
                                         <span>[Video]</span>
-                                        <Video className="w-4 h-4 inline-block" />
+                                        <Video className="w-3 h-3 sm:w-4 sm:h-4 inline-block" />
                                     </>
                                 )}
 

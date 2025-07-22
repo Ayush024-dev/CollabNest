@@ -60,7 +60,10 @@ const sendMessage = AsyncHandler(async (req, res) => {
 
     // This is when sender is me and receiver is other user
     await LastConversations.findOneAndUpdate(
-      { owner: senderId },
+      { owner: senderId, $or: [
+        { sender: senderId, receiver: receiverId },
+        { sender: receiverId, receiver: senderId }
+      ] },
       {
         sender: senderId,
         receiver: receiverId,
@@ -77,7 +80,10 @@ const sendMessage = AsyncHandler(async (req, res) => {
 
     // this is when other user is sender and I am receiver
     await LastConversations.findOneAndUpdate(
-      { owner: receiverId },
+      { owner: receiverId, $or: [
+        { sender: senderId, receiver: receiverId },
+        { sender: receiverId, receiver: senderId }
+      ] },
       {
         sender: senderId,
         receiver: receiverId,
@@ -228,7 +234,7 @@ const lastConversation = AsyncHandler(async (req, res) => {
       receiver: encrypt(c.receiver.toString()),
     }));
 
-
+    console.log("encryptedConversations: ", encryptedConversations);
 
     return res.json(
       new ApiResponse(200, encryptedConversations, "Last conversation fetched successfully!!")

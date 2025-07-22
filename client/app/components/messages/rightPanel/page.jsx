@@ -184,17 +184,17 @@ const RightPanel = ({ users, onShowError, showId, reqUserId, getStatus, statusMa
     const receiver = users.data[showId.toString()];
 
     return (
-      <div className="flex flex-col w-2/3 h-full border-l">
+      <div className="flex flex-col w-full h-full">
       {/* Header */}
-      <div className="flex items-center gap-4 p-4 border-b shadow-sm bg-white">
-        <Avatar className="w-12 h-12">
+      <div className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4 border-b border-slate-300 shadow-sm bg-gradient-to-r from-slate-700 to-slate-800">
+        <Avatar className="w-10 h-10 sm:w-12 sm:h-12 ring-2 ring-slate-400">
           <AvatarImage src={receiver?.avatar} alt={receiver?.name || "User"}/>
-          <AvatarFallback>{receiver.name?.[0] || "U"}</AvatarFallback>
+          <AvatarFallback className="bg-slate-500 text-white font-semibold">{receiver.name?.[0] || "U"}</AvatarFallback>
         </Avatar>
         <div>
-          <h3 className="text-lg font-semibold">{receiver.name}</h3>
-          <p className="text-sm text-gray-500">{receiver.institute}</p>
-          <p className="text-xs text-gray-500">
+          <h3 className="text-base sm:text-lg font-semibold text-white">{receiver.name}</h3>
+          <p className="text-xs sm:text-sm text-slate-300">{receiver.institute}</p>
+          <p className="text-xs text-slate-400">
             {isOnline
               ? "Online"
               : lastSeen
@@ -207,15 +207,18 @@ const RightPanel = ({ users, onShowError, showId, reqUserId, getStatus, statusMa
       {/* Chat Window */}
       <div
         ref={scrollContainerRef}
-        className="flex-1 overflow-y-auto px-4 py-2 bg-gray-50 space-y-3 relative"
+        className="flex-1 overflow-y-auto px-3 sm:px-4 py-2 bg-gradient-to-b from-slate-50 to-white space-y-3 relative custom-scrollbar"
         onScroll={handleScroll}
+        style={{
+          scrollbarWidth: 'thin',
+          scrollbarColor: '#cbd5e1 transparent'
+        }}
       >
         {messages.map((msg, index) => {
           // console.log(msg.type);
           const isSender = msg.sender === reqUserId;
-          const bubbleColor = isSender ? "bg-yellow-200" : "bg-blue-100";
+          const bubbleColor = isSender ? "bg-emerald-500 text-white" : "bg-white border border-slate-200";
           const align = isSender ? "justify-end" : "justify-start";
-          const textAlign = isSender ? "text-right" : "text-left";
           const user = users.data[msg.sender.toString()];
           const time = msg.updatedAt ? new Date(msg.updatedAt) : (msg.timestamp ? new Date(msg.timestamp) : null);
           const formattedTime = time ? time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "";
@@ -268,20 +271,20 @@ const RightPanel = ({ users, onShowError, showId, reqUserId, getStatus, statusMa
             <div key={index} className={`flex ${align} items-end gap-2`}>
               {/* Avatar */}
               {!isSender && (
-                <Avatar className="w-8 h-8">
+                <Avatar className="w-6 h-6 sm:w-8 sm:h-8 ring-1 ring-slate-300">
                   <AvatarImage src={user?.avatar} />
-                  <AvatarFallback>{user?.name?.[0] || "U"}</AvatarFallback>
+                  <AvatarFallback className="bg-emerald-500 text-white text-xs font-semibold">{user?.name?.[0] || "U"}</AvatarFallback>
                 </Avatar>
               )}
               {/* Message Bubble with Menu */}
               <div className="relative flex flex-col">
                 {/* Menu at top right */}
                 {msg.sender === reqUserId && !isEditing && (
-                  <div className="absolute top-3 right-1 z-10">
+                  <div className="absolute top-2 right-2 z-10">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <button className="p-1 rounded-full hover:bg-gray-200 focus:outline-none">
-                          <MoreHorizontal className="w-4 h-4 text-gray-500" />
+                        <button className="p-1 rounded-full hover:bg-blue-600 focus:outline-none">
+                          <MoreHorizontal className="w-3 h-3 sm:w-4 sm:h-4 text-blue-200 hover:text-white" />
                         </button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
@@ -339,11 +342,11 @@ const RightPanel = ({ users, onShowError, showId, reqUserId, getStatus, statusMa
                   </div>
                 )}
                 {msg.sender !== reqUserId && (
-                  <div className="absolute top-3 right-1 z-10">
+                  <div className="absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <button className="p-1 rounded-full hover:bg-gray-200 focus:outline-none">
-                        <MoreHorizontal className="w-4 h-4 text-gray-500" />
+                      <button className="p-1 rounded-full hover:bg-slate-200 focus:outline-none">
+                        <MoreHorizontal className="w-3 h-3 sm:w-4 sm:h-4 text-slate-500" />
                       </button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
@@ -372,7 +375,11 @@ const RightPanel = ({ users, onShowError, showId, reqUserId, getStatus, statusMa
                 </div>
                 )}
                 {/* Message Bubble */}
-                <div id={msg._id} className={`max-w-sm px-4 py-2 rounded-lg shadow ${bubbleColor} ${textAlign} mt-4`} style={{ minWidth: '4rem' }}>
+                <div 
+                  id={msg._id} 
+                  className={`group max-w-xs sm:max-w-sm px-3 sm:px-4 py-2 sm:py-3 rounded-2xl shadow-sm ${bubbleColor} mt-2 relative`}
+                  style={{ minWidth: '3rem' }}
+                >
                   {/* Reply snippet if this message is a reply */}
                   {replySnippet}
                   {isEditing ? (
@@ -416,47 +423,79 @@ const RightPanel = ({ users, onShowError, showId, reqUserId, getStatus, statusMa
                     </form>
                   ) : (
                     <>
-                      {msg.type === "text" && <p>{msg.content}{msg.edited && <span className="text-xs text-gray-500 ml-1">(edited)</span>}</p>}
-                      {msg.type === "emoji" && <p className="text-3xl">{msg.content}</p>}
+                      {msg.type === "text" && (
+                        <p className="text-sm sm:text-base break-words">
+                          {msg.content}
+                          {msg.edited && (
+                            <span className={`text-xs ml-1 ${isSender ? 'text-blue-200' : 'text-slate-500'}`}>
+                              (edited)
+                            </span>
+                          )}
+                        </p>
+                      )}
+                      {msg.type === "emoji" && <p className="text-2xl sm:text-3xl">{msg.content}</p>}
                       {msg.type === "image" && (
                         <div className="flex flex-col items-start">
-                          <img src={msg.fileUrl} alt="image" className="rounded-md w-64" onLoad={isLastMessage ? handleMediaLoad : undefined} />
+                          <img 
+                            src={msg.fileUrl} 
+                            alt="image" 
+                            className="rounded-lg w-48 sm:w-64 max-w-full" 
+                            onLoad={isLastMessage ? handleMediaLoad : undefined} 
+                          />
                           {msg.content && (
-                            <span className="mt-1 text-sm text-gray-700">{msg.content}</span>
+                            <span className={`mt-2 text-xs sm:text-sm ${isSender ? 'text-blue-100' : 'text-slate-700'}`}>
+                              {msg.content}
+                            </span>
                           )}
                         </div>
                       )}
                       {msg.type === "file" && (
                         <div className="flex flex-col items-start">
-                          <a href={msg.fileUrl} download className="underline text-blue-600" onLoad={isLastMessage ? handleMediaLoad : undefined}>
+                          <a 
+                            href={msg.fileUrl} 
+                            download 
+                            className={`underline ${isSender ? 'text-blue-200 hover:text-white' : 'text-blue-600 hover:text-blue-800'}`}
+                            onLoad={isLastMessage ? handleMediaLoad : undefined}
+                          >
                             Download File
                           </a>
                           {msg.content && (
-                            <span className="mt-1 text-sm text-gray-700">{msg.content}</span>
+                            <span className={`mt-2 text-xs sm:text-sm ${isSender ? 'text-blue-100' : 'text-slate-700'}`}>
+                              {msg.content}
+                            </span>
                           )}
                         </div>
                       )}
                       {msg.type === "video" && (
                         <div className="flex flex-col items-start">
-                          <video src={msg.fileUrl} controls className="w-64 rounded-md" onLoadedData={isLastMessage ? handleMediaLoad : undefined} />
+                          <video 
+                            src={msg.fileUrl} 
+                            controls 
+                            className="w-48 sm:w-64 max-w-full rounded-lg" 
+                            onLoadedData={isLastMessage ? handleMediaLoad : undefined} 
+                          />
                           {msg.content && (
-                            <span className="mt-1 text-sm text-gray-700">{msg.content}</span>
+                            <span className={`mt-2 text-xs sm:text-sm ${isSender ? 'text-blue-100' : 'text-slate-700'}`}>
+                              {msg.content}
+                            </span>
                           )}
                         </div>
                       )}
                     </>
                   )}
                   {/* Message Time */}
-                  <div className="flex justify-end mt-1">
-                    <span className="text-xs text-gray-500">{formattedTime}</span>
+                  <div className={`flex ${isSender ? 'justify-end' : 'justify-start'} mt-1`}>
+                    <span className={`text-xs ${isSender ? 'text-blue-200' : 'text-slate-500'}`}>
+                      {formattedTime}
+                    </span>
                   </div>
                 </div>
               </div>
               {/* Sender's avatar on right if desired (optional) */}
               {isSender && (
-                <Avatar className="w-8 h-8">
+                <Avatar className="w-6 h-6 sm:w-8 sm:h-8 ring-1 ring-blue-300">
                   <AvatarImage src={user?.avatar} />
-                  <AvatarFallback>{user?.name?.[0] || "U"}</AvatarFallback>
+                  <AvatarFallback className="bg-blue-600 text-white text-xs font-semibold">{user?.name?.[0] || "U"}</AvatarFallback>
                 </Avatar>
               )}
             </div>
@@ -467,17 +506,17 @@ const RightPanel = ({ users, onShowError, showId, reqUserId, getStatus, statusMa
         {showNewMsgIndicator && (
           <button
             onClick={handleScrollToBottom}
-            className="fixed bottom-24 right-12 z-20 bg-emerald-400 hover:bg-emerald-500 text-white p-2 rounded-full shadow-lg flex items-center animate-bounce"
+            className="fixed bottom-20 sm:bottom-24 right-4 sm:right-12 z-20 bg-blue-500 hover:bg-blue-600 text-white p-2 sm:p-3 rounded-full shadow-lg flex items-center animate-bounce transition-colors"
             style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.15)' }}
             aria-label="Scroll to latest message"
           >
-            <ArrowDown className="w-6 h-6" />
+            <ArrowDown className="w-4 h-4 sm:w-6 sm:h-6" />
           </button>
         )}
       </div>
 
       {/* Input Message */}
-      <div className="border-t p-4 bg-white">
+      <div className="border-t border-slate-300 p-3 sm:p-4 bg-white">
         <InputMessage
           receiverId={showId}
           onSend={(msg) => setMessages((prev) => [...prev, { ...msg, sender: reqUserId, receiver: showId }])}

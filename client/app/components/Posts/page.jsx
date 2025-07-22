@@ -105,7 +105,7 @@ const Posts = ({ users, OpenCommentSection, Feed, likedMap, fromProfile, onShowE
         await LikePosts({ postId, setLiked, onShowError });
     };
     return (
-        <div className="h-[calc(100vh-160px)] overflow-y-auto pr-4">
+        <div className="h-[calc(100vh-160px)] overflow-y-auto custom-scrollbar pr-4">
             {console.log(feeds)}
             <div className="flex flex-col gap-5 font-inconsolata">
                 {feeds.map((feed) => (
