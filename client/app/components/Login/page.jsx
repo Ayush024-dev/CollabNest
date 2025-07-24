@@ -8,6 +8,7 @@ import GoogleIcon from '@mui/icons-material/Google';
 import LinkedInIcon from '@mui/icons-material/LinkedIn';
 // import CheckBoxIcon from '@mui/icons-material/CheckBox';
 import { useRouter } from 'next/navigation';
+import LoadingPage from '../loading/page';
 const Login = ({ onShowAlert, onShowError }) => {
   const [user, setUser] = useState({
     email: "",
@@ -70,7 +71,9 @@ const Login = ({ onShowAlert, onShowError }) => {
   };
 
   return (
-    <div className='bg-black h-auto w-2/5 p-4 rounded-md'>
+    <>
+      {loading && <LoadingPage message="Logging you in..." />}
+      <div className='bg-black h-auto w-2/5 p-4 rounded-md'>
       {/* {msg.length > 0 ? (
         <>
           <Alert icon={<CheckBoxIcon fontSize="inherit" />} severity="success">
@@ -162,6 +165,7 @@ const Login = ({ onShowAlert, onShowError }) => {
 
       </div>
     </div>
+    </>
   )
 }
 

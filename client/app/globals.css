@@ -108,3 +108,28 @@ body {
   scrollbar-width: thin;
   scrollbar-color: #cbd5e1 transparent;
 }
+
+.custom-quill-editor .ql-toolbar.ql-snow {
+  background: #111;
+  border: none;
+  border-radius: 0.5rem 0.5rem 0 0;
+}
+.custom-quill-editor .ql-container.ql-snow {
+  background: #111;
+  border: none;
+  color: #fff;
+  border-radius: 0 0 0.5rem 0.5rem;
+}
+.custom-quill-editor .ql-editor {
+  background: #a7adba;
+  color: #fff;
+}
+.custom-quill-editor .ql-toolbar .ql-stroke {
+  stroke: #fff;
+}
+.custom-quill-editor .ql-toolbar .ql-fill {
+  fill: #fff;
+}
+.custom-quill-editor .ql-toolbar .ql-picker {
+  color: #fff;
+}

@@ -12,6 +12,11 @@ import CancelIcon from '@mui/icons-material/Cancel';
 import { Alert } from "@mui/material";
 import Posts from '../Posts/page';
 import { useRouter } from 'next/navigation';
+import LoadingPage from '../loading/page';
+import Dialog from '@mui/material/Dialog';
+import DialogTitle from '@mui/material/DialogTitle';
+import DialogContent from '@mui/material/DialogContent';
+import DialogActions from '@mui/material/DialogActions';
 
 const ProfilePage = () => {
   const [user, getUser] = useState({});
@@ -26,6 +31,8 @@ const ProfilePage = () => {
   const [blur, setblur] = useState(false);
   const [loading, setLoading] = useState(true);
   const [connectionStatus, getConnectionStatus] = useState("");
+  const [showLogoutDialog, setShowLogoutDialog] = useState(false);
+  const [loadingLogout, setLoadingLogout] = useState(false);
 
   const router = useRouter();
 
@@ -163,22 +170,30 @@ const ProfilePage = () => {
     }
   };
 
+  const handleLogoutClick = () => {
+    setShowLogoutDialog(true);
+  };
 
-  const logout = async () => {
+  const handleLogoutConfirm = async () => {
+    setShowLogoutDialog(false);
+    setLoadingLogout(true);
     try {
       await axios.post('http://localhost:8080/api/v1/users/logOut', {}, { withCredentials: true });
-      console.log("logout successfull");
-
-      alert("logout successfull");
-
+      localStorage.removeItem('user');
+      setMsg('logout successful');
       setTimeout(() => {
-        router.push('/')
-      }, 2000);
+        setLoadingLogout(false);
+        router.push('/');
+      }, 1500);
     } catch (error) {
-      console.log(error.response.data);
-      alert("not able to logout");
+      setLoadingLogout(false);
+      setError('not able to logout');
     }
-  }
+  };
+
+  const handleLogoutCancel = () => {
+    setShowLogoutDialog(false);
+  };
 
   return (
     <div className='min-h-screen w-full flex flex-col bg-slate-600 relative'>
@@ -210,6 +225,16 @@ const ProfilePage = () => {
         </div>
       )}
 
+      {loadingLogout && <LoadingPage message="Logging you out..." />}
+      <Dialog open={showLogoutDialog} onClose={handleLogoutCancel}>
+        <DialogTitle>Confirm Logout</DialogTitle>
+        <DialogContent>Are you sure you want to logout?</DialogContent>
+        <DialogActions>
+          <Button onClick={handleLogoutCancel} variant="outline">Cancel</Button>
+          <Button onClick={handleLogoutConfirm} variant="destructive">Logout</Button>
+        </DialogActions>
+      </Dialog>
+
       {/* Close Comment Button */}
       {comment && (
         <button
@@ -239,7 +264,7 @@ const ProfilePage = () => {
 
         {/* Left Sidebar - Fixed Position */}
         <div className="fixed left-4 bottom-8 z-30">
-          <Button onClick={logout} variant='ghost' className="relative flex items-center justify-center p-0 hover:bg-transparent">
+          <Button onClick={handleLogoutClick} variant='ghost' className="relative flex items-center justify-center p-0 hover:bg-transparent">
             {/* Yellow Profile Image as Base */}
             <Image src="/assets/img/profile.svg" width={66} height={69} alt='profile' className="relative" />
             {/* Logout Icon Positioned Over the Image */}

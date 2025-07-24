@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react'
 import Textarea from '@mui/joy/Textarea';
 import { Input, Button } from '@mui/joy';
 import Image from 'next/image';
-import { FileUpload } from '@mui/icons-material';
+import { CloudUpload } from '@mui/icons-material';
 import axios from 'axios';
 // import io from 'socket.io-client'
 
@@ -103,10 +103,10 @@ const WritingTab = ({ type, onShowMsg, onShowError }) => {
                     />
                     {/* Label styled as an icon */}
                     <label htmlFor="upload-media" style={{ cursor: 'pointer', display: 'inline-block', marginTop: '10px' }}>
-                        <FileUpload style={{ fontSize: '48px', color: '#1976d2' }} />
+                        <CloudUpload style={{ fontSize: '48px', color: '#1976d2' }} />
                     </label>
 
-                    <Button color='success' className='w-2/5 text-center' onClick={postContent}>Post</Button>
+                    <Button color='success' className='w-2/5 text-center' onClick={postContent} disabled={!post.content || post.content.trim().length === 0}>Post</Button>
                 </div>
             </div>
         </div>

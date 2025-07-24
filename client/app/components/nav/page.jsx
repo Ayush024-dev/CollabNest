@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from 'react'
-import { Menu, X, User, MessageCircle, Info } from 'lucide-react'
+import { Menu, X, User, MessageCircle, Info, Newspaper } from 'lucide-react'
 import axios from 'axios'
+import { useRouter } from 'next/navigation'
 
 const NavBar = ({ profileLink }) => {
   const [isloggedin, setLoggedIn] = useState(false);
   const [userid, setUserid] = useState("");
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const router = useRouter();
 
   const check = async () => {
     try {
@@ -30,7 +32,7 @@ const NavBar = ({ profileLink }) => {
 
   const handleNavigation = (path) => {
     // Replace with your navigation logic
-    window.location.href = path;
+    router.push(path);
     setIsMobileMenuOpen(false);
   }
 
@@ -71,8 +73,8 @@ const NavBar = ({ profileLink }) => {
                   className="text-gray-300 hover:text-white font-mono px-3 py-2 rounded-md text-sm font-medium transition duration-150 hover:bg-gray-800 flex items-center space-x-2"
                   onClick={() => { handleNavigation('/components/feeds'); }}
                 >
-                  <Info size={16} />
-                  <span>About Us</span>
+                  <Newspaper size={16} />
+                  <span>Feeds</span>
                 </button>
                 <button
                   className="text-gray-300 hover:text-white font-mono px-3 py-2 rounded-md text-sm font-medium transition duration-150 hover:bg-gray-800 flex items-center space-x-2"

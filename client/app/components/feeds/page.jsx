@@ -12,6 +12,12 @@ import WritingTab from '../writingTab/page';
 import CommentSection from '../comments/page';
 import Posts from '../Posts/page';
 import Notification from '../Notifications/page';
+import LoadingPage from '../loading/page';
+import Dialog from '@mui/material/Dialog';
+import DialogTitle from '@mui/material/DialogTitle';
+import DialogContent from '@mui/material/DialogContent';
+import DialogActions from '@mui/material/DialogActions';
+
 
 import CancelIcon from '@mui/icons-material/Cancel';
 import { Alert } from "@mui/material";
@@ -35,6 +41,8 @@ const Feeds = () => {
   const [postId, setpostId] = useState("");
   const [openNotif, setOpenNotif] = useState(false);
   const [notificationCount, setNotificationCount] = useState(0);
+  const [showLogoutDialog, setShowLogoutDialog] = useState(false);
+  const [loadingLogout, setLoadingLogout] = useState(false);
 
   const router = useRouter();
 
@@ -97,6 +105,30 @@ const Feeds = () => {
     }
   }
 
+  const handleLogoutClick = () => {
+    setShowLogoutDialog(true);
+  };
+
+  const handleLogoutConfirm = async () => {
+    setShowLogoutDialog(false);
+    setLoadingLogout(true);
+    try {
+      await axios.post('http://localhost:8080/api/v1/users/logOut', {}, { withCredentials: true });
+      localStorage.removeItem('user');
+      setMsg('logout successful');
+      setTimeout(() => {
+        setLoadingLogout(false);
+        router.push('/');
+      }, 1500);
+    } catch (error) {
+      setLoadingLogout(false);
+      setError('not able to logout');
+    }
+  };
+
+  const handleLogoutCancel = () => {
+    setShowLogoutDialog(false);
+  };
 
 
   useEffect(() => {
@@ -115,26 +147,20 @@ const Feeds = () => {
   }, [])
 
 
-  const logout = async () => {
-    try {
-      await axios.post('http://localhost:8080/api/v1/users/logOut', {}, { withCredentials: true });
-      console.log("logout successfull");
-
-      alert("logout successfull");
-
-      setTimeout(() => {
-        router.push('/')
-      }, 2000);
-    } catch (error) {
-      console.log(error.response.data);
-      alert("not able to logout");
-    }
-  }
   if (Object.keys(users).length === 0) {
     return <div>Loading users...</div>;
   }
   return (
     <div className='min-h-screen w-full flex flex-col bg-slate-600 relative'>
+      {loadingLogout && <LoadingPage message="Logging you out..." />}
+      <Dialog open={showLogoutDialog} onClose={handleLogoutCancel}>
+        <DialogTitle>Confirm Logout</DialogTitle>
+        <DialogContent>Are you sure you want to logout?</DialogContent>
+        <DialogActions>
+          <Button onClick={handleLogoutCancel} variant="outline">Cancel</Button>
+          <Button onClick={handleLogoutConfirm} variant="destructive">Logout</Button>
+        </DialogActions>
+      </Dialog>
       {/* to get messages */}
       {msg && (
         <div className="absolute z-50 top-4 right-4">
@@ -230,7 +256,7 @@ const Feeds = () => {
             <Image src="/assets/icons/book.svg" width={58} height={58} alt='book' />
           </div>
           <div className="fixed left-4 bottom-8 z-30">
-            <Button onClick={logout} variant='ghost' className="relative flex items-center justify-center p-0 hover:bg-transparent">
+            <Button onClick={handleLogoutClick} variant='ghost' className="relative flex items-center justify-center p-0 hover:bg-transparent">
               {/* Yellow Profile Image as Base */}
               <Image src="/assets/img/profile.svg" width={66} height={69} alt='profile' className="relative" />
               {/* Logout Icon Positioned Over the Image */}
