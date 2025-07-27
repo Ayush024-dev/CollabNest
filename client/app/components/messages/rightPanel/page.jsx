@@ -82,15 +82,17 @@ const RightPanel = ({ users, onShowError, showId, reqUserId, getStatus, statusMa
     // Listen for userOnline/userOffline events and update status in real time
     useEffect(() => {
       const handleOnline = ({ userId }) => {
-        console.log('[RightPanel] Received userOnline:', userId);
+        console.log('[RightPanel] Received userOnline:', userId, 'showId:', showId);
         if (userId === showId) {
+          console.log('[RightPanel] Setting user online for current chat');
           setIsOnline(true);
           setLastSeen(null);
         }
       };
       const handleOffline = ({ userId, timestamp }) => {
-        console.log('[RightPanel] Received userOffline:', userId, timestamp);
+        console.log('[RightPanel] Received userOffline:', userId, timestamp, 'showId:', showId);
         if (userId === showId) {
+          console.log('[RightPanel] Setting user offline for current chat');
           setIsOnline(false);
           setLastSeen(timestamp);
         }
@@ -107,7 +109,7 @@ const RightPanel = ({ users, onShowError, showId, reqUserId, getStatus, statusMa
     useEffect(() => {
       if (!showId) return;
       const status = getStatus(showId);
-      console.log('[RightPanel] Status update for', showId, ':', status, 'statusMap:', statusMap);
+      console.log('[RightPanel] Status update effect triggered for', showId, ':', status, 'statusMap:', statusMap);
       if (status === true) {
         console.log('[RightPanel] Setting user online:', showId);
         setIsOnline(true);

@@ -86,6 +86,31 @@ const Messages = () => {
     }
   }, [searchParams]);
 
+  useEffect(() => {
+    if (reqUserId) {
+      // Ensure user is in personal room for status updates
+      console.log('[Messages] Ensuring user is in personal room:', reqUserId);
+      socket.emit('joinRoom', { room: reqUserId, type: "Personal" });
+      console.log('[Messages] Joining message room:', reqUserId + "-message");
+      socket.emit('joinRoom', { room: reqUserId + "-message", type: "Message" });
+      return () => {
+        console.log('[Messages] Leaving message room:', reqUserId + "-message");
+        socket.emit('leaveRoom', { room: reqUserId + "-message", type: "Message" });
+        // Don't leave personal room - keep it active for status updates
+      };
+    }
+  }, [reqUserId]);
+
+  // Add this after reqUserId is set
+  const joinedPersonalRoomRef = useRef(false);
+  useEffect(() => {
+    if (reqUserId && !joinedPersonalRoomRef.current) {
+      console.log('[Messages] (local) Emitting joinRoom for personal room:', reqUserId);
+      socket.emit('joinRoom', { room: reqUserId, type: 'Personal' });
+      joinedPersonalRoomRef.current = true;
+    }
+  }, [reqUserId]);
+
   // Listen for online/offline events once
   useEffect(() => {
     const handleOnline = ({ userId }) => {
@@ -125,18 +150,6 @@ const Messages = () => {
     };
   }, []);
 
-  // Join/leave message room for message notifications
-  useEffect(() => {
-    if (reqUserId) {
-      const messageRoom = reqUserId + "-message";
-      console.log('[Messages] Joining message room:', messageRoom);
-      socket.emit('joinRoom', { room: messageRoom, type: "Message" });
-      return () => {
-        console.log('[Messages] Leaving message room:', messageRoom);
-        socket.emit('leaveRoom', { room: messageRoom, type: "Message" });
-      };
-    }
-  }, [reqUserId]);
 
   // Fetch status for all contacts when users are loaded (only if not already set by real-time events)
   useEffect(() => {
@@ -228,7 +241,11 @@ const Messages = () => {
   }
 
   // Synchronous helper to get status for a userId
-  const getStatusSync = (userId) => statusMap[userId];
+  const getStatusSync = (userId) => {
+    const status = statusMap[userId];
+    console.log('[Messages] getStatusSync called for', userId, 'returning:', status, 'statusMap:', statusMap);
+    return status;
+  };
 
   // Handle mouse down on divider
   const handleMouseDown = (e) => {
