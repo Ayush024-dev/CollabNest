@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from "react"
 import axios from "axios";
 import { ChevronUp, ChevronDown, X, UserPlus, MessageCircle, UserCheck, ChevronLeft, ChevronRight } from "lucide-react"
+import socket from '@/app/lib/socket';
 
-const Notification = ({ Allusers, onShowError, countofNew }) => {
+const Notification = ({ users, onShowError, decrementNotificationCount, notificationCount, setNotificationCount }) => {
   const [notRead, getNotRead] = useState([]);
   const [Read, getRead] = useState([]);
-  const [users, getUsers] = useState([]);
   const [showPrevious, setShowPrevious] = useState(false);
   
   // Pagination states
@@ -34,6 +34,7 @@ const Notification = ({ Allusers, onShowError, countofNew }) => {
     }
   }
 
+  // When marking as read, decrement count in parent
   const handleRead = async (notif) => {
     try {
       await axios.patch(
@@ -41,7 +42,6 @@ const Notification = ({ Allusers, onShowError, countofNew }) => {
         { notification_id: notif._id },
         { withCredentials: true }
       );
-
       getNotRead(prev => prev.filter(n => n._id !== notif._id));
       getRead(prev => [notif, ...prev]);
     } catch (error) {
@@ -138,8 +138,9 @@ const Notification = ({ Allusers, onShowError, countofNew }) => {
     );
   };
 
+  // Use users prop for sender info
   const NotificationItem = ({ notif, isRead = false }) => {
-    const sender = users.data?.[notif.from.toString()];
+    const sender = users.data?.[notif.from?.toString()];
     console.log(sender);
     
     return (
@@ -242,38 +243,41 @@ const Notification = ({ Allusers, onShowError, countofNew }) => {
     );
   };
 
-  useEffect(() => {
-    if (typeof countofNew === "function") {
-      countofNew(notRead.length);
-    }
-  }, [notRead, countofNew]);
 
+  // Real-time socket update for new notifications
   useEffect(() => {
-    const initialize = async () => {
+    async function initialize() {
       try {
-        if (Allusers) getUsers(Allusers);
-        else {
-          const response = await axios.get('http://localhost:8080/api/v1/users/allUserInfo');
-          getUsers(response);
-        }
         await notifications();
-        
-        // Socket functionality would need to be implemented separately in Vite
-        // socket.on("newNotification", (notification) => {
-        //   getNotRead((prevNotif) => {
-        //     if (prevNotif.some((notif) => notif._id === notification._id)) {
-        //       return prevNotif;
-        //     }
-        //     return [notification, ...prevNotif];
-        //   });
-        // });
-        
       } catch (error) {
         console.error("Failed to initialize notification or fetch users:", error);
       }
     }
     initialize();
+
+    function handleNewNotification(notification) {
+      if (notification && notification.read === false) {
+        getNotRead((prevNotif) => {
+          if (prevNotif.some((notif) => notif._id === notification._id)) {
+            return prevNotif;
+          }
+          return [notification, ...prevNotif];
+        });
+      }
+    }
+
+    socket.on("newNotification", handleNewNotification);
+    return () => {
+      socket.off("newNotification", handleNewNotification);
+    };
   }, []);
+
+  // Add this effect to always sync notificationCount after notRead changes
+  useEffect(() => {
+    if (typeof setNotificationCount === 'function') {
+      setNotificationCount(notRead.length);
+    }
+  }, [notRead, setNotificationCount]);
 
   // Get paginated items
   const paginatedNewNotifications = getPaginatedItems(notRead, currentPageNew);

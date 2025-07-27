@@ -28,6 +28,7 @@ const LeftPanel = ({ users, onShowError, SetshowId, reqUserId, initialTarget, sh
         getLastConverse();
         // Real-time update for last conversation
         const handleUpdateConverse = (msg) => {
+          console.log('[LeftPanel] Received update_converse:', msg);
           const conversation = msg.conversation || msg;
           // If the current user is either sender or receiver (should always be true)
           if (conversation.sender === reqUserId || conversation.receiver === reqUserId) {
@@ -64,6 +65,7 @@ const LeftPanel = ({ users, onShowError, SetshowId, reqUserId, initialTarget, sh
         socket.on("update_converse", handleUpdateConverse);
         // Listen for edit_converse event
         const handleEditConverse = (msg) => {
+          console.log('[LeftPanel] Received edit_converse:', msg);
           const { conversationId, lastMessage } = msg;
           setConversations((prev) => prev.map(convo =>
             convo._id === conversationId
@@ -81,6 +83,7 @@ const LeftPanel = ({ users, onShowError, SetshowId, reqUserId, initialTarget, sh
         socket.on("edit_converse", handleEditConverse);
         // Listen for delete_converse event (delete for me and for everyone)
         const handleDeleteConverse = (msg) => {
+          console.log('[LeftPanel] Received delete_converse:', msg);
           const convoObj = msg.myConvo || msg.convo;
           if (!convoObj) return;
           setConversations((prev) => prev.map(convo =>

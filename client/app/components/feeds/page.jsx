@@ -5,6 +5,7 @@ import React, { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
+import socket from '@/app/lib/socket';
 
 // Components import
 import NavBar from '../nav/page';
@@ -24,7 +25,7 @@ import { Alert } from "@mui/material";
 import CheckBoxIcon from "@mui/icons-material/CheckBox";
 import ErrorIcon from "@mui/icons-material/Error";
 import LogoutIcon from '@mui/icons-material/Logout';
-
+import { useRef } from 'react';
 
 
 const Feeds = () => {
@@ -113,13 +114,26 @@ const Feeds = () => {
     setShowLogoutDialog(false);
     setLoadingLogout(true);
     try {
+      if (joinedRoomRef.current && userid) {
+        socket.emit('leaveRoom', { room: userid, type: 'Personal' });
+        joinedRoomRef.current = false;
+        console.log('[Feeds] Left personal room on logout:', userid);
+      }
       await axios.post('http://localhost:8080/api/v1/users/logOut', {}, { withCredentials: true });
       localStorage.removeItem('user');
+      
+      // Emit logout event to reset status on other pages
+      socket.emit('logout');
+      
+      // Disconnect socket completely - don't reconnect
+      socket.disconnect();
+      console.log('[Feeds] Socket disconnected on logout');
+      
       setMsg('logout successful');
       setTimeout(() => {
         setLoadingLogout(false);
         router.push('/');
-      }, 1500);
+      }, 500);
     } catch (error) {
       setLoadingLogout(false);
       setError('not able to logout');
@@ -129,7 +143,6 @@ const Feeds = () => {
   const handleLogoutCancel = () => {
     setShowLogoutDialog(false);
   };
-
 
   useEffect(() => {
     const initialize = async () => {
@@ -145,6 +158,66 @@ const Feeds = () => {
     }
     initialize();
   }, [])
+
+  const joinedRoomRef = useRef(false);
+
+  useEffect(() => {
+    if (!userid) return;
+    
+    // Only join if not already joined
+    if (!joinedRoomRef.current) {
+      socket.emit('joinRoom', { room: userid, type: 'Personal' });
+      joinedRoomRef.current = true;
+      console.log('[Feeds] Joined personal room:', userid);
+    }
+    
+    // Listen for reconnection events only
+    const handleConnect = () => {
+      // Only rejoin if we were previously joined (this is a reconnection)
+      if (joinedRoomRef.current) {
+        socket.emit('joinRoom', { room: userid, type: 'Personal' });
+        console.log('[Feeds] Rejoined personal room on reconnect:', userid);
+      }
+    };
+    
+    socket.on('connect', handleConnect);
+    return () => {
+      socket.off('connect', handleConnect);
+      // Do NOT leave the personal room on unmount. Only leave on logout.
+    };
+  }, [userid]);
+
+  useEffect(() => {
+    // Fetch initial unread count
+    axios.get('http://localhost:8080/api/v1/users/showNotification', { withCredentials: true })
+      .then(res => {
+        const notifications = res.data.data || [];
+        const unreadCount = notifications.filter(n => n.read === false).length;
+        setNotificationCount(unreadCount);
+      })
+      .catch(() => setNotificationCount(0));
+
+    // Listen for newNotification socket event
+    const handler = (notification) => {
+      console.log('[Feeds] Received newNotification:', notification);
+      if (notification && notification.read === false) {
+        console.log('[Feeds] Updating notification count');
+        setNotificationCount(count => count + 1);
+      }
+    };
+    socket.on('newNotification', handler);
+    return () => socket.off('newNotification', handler);
+  }, [userid]);
+
+  // Decrement function, never below 0
+  const decrementNotificationCount = () => {
+    setNotificationCount(count => Math.max(0, count - 1));
+  };
+
+
+
+
+
 
 
   if (Object.keys(users).length === 0) {
@@ -191,7 +264,7 @@ const Feeds = () => {
 
       {openNotif && (
         <div className='absolute inset-0 z-40 flex justify-center items-center'>
-          <Notification users={users} onShowError={handleErrorAlert} countofNew={setNotificationCount} />
+          <Notification users={users} onShowError={handleErrorAlert} countofNew={setNotificationCount} decrementNotificationCount={decrementNotificationCount} notificationCount={notificationCount} setNotificationCount={setNotificationCount} />
         </div>
       )}
 
@@ -240,7 +313,7 @@ const Feeds = () => {
             <div className="relative group cursor-pointer" onClick={OpenNotificationWindow}>
               {/* Hover circle */}
               <div className="w-16 h-16 rounded-full flex items-center justify-center transition duration-200 group-hover:bg-gray-200">
-                <Image src="/assets/icons/notification.svg" width={58} height={58} alt="noti" />
+                <Image src="/assets/icons/notification.svg" width={48} height={48} alt="noti" />
               </div>
 
               {/* Red count badge */}
@@ -251,9 +324,17 @@ const Feeds = () => {
               )}
             </div>
 
-            <Image src="/assets/icons/message.svg" width={58} height={58} alt='msg' />
-            <Image src="/assets/icons/write.svg" width={58} height={58} alt='write' />
-            <Image src="/assets/icons/book.svg" width={58} height={58} alt='book' />
+            
+
+            <div className="icon-hover-circle">
+                <Image src="/assets/icons/message.svg" width={48} height={48} alt='msg' className='cursor-pointer' onClick={()=>router.push(`/components/messages?user=${userid}`)}/>
+            </div>
+            <div className="icon-hover-circle">
+                <Image src="/assets/icons/write.svg" width={48} height={48} alt='write' onClick={() => openWritingTab("Ideate")}/>
+            </div>
+            {/* <div className="icon-hover-circle">
+                <Image src="/assets/icons/book.svg" width={48} height={48} alt='book' />
+            </div> */}
           </div>
           <div className="fixed left-4 bottom-8 z-30">
             <Button onClick={handleLogoutClick} variant='ghost' className="relative flex items-center justify-center p-0 hover:bg-transparent">

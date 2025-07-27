@@ -1,9 +1,13 @@
 import { Router } from "express";
-import { aboutUser, alluserInfo, isloggedin, loginUser, logoutUser, registerUser, verifyEmail, sendConnectionRequest, getUserConnectionStatus, AcceptOrRejectConnection, showNotifications, RemoveOrWithdrawConnection, toggleReadStatus } from "../controllers/user.controller.js";
+import {
+    aboutUser, alluserInfo, isloggedin, loginUser, logoutUser, registerUser, verifyEmail,
+    sendConnectionRequest, getUserConnectionStatus, AcceptOrRejectConnection, showNotifications,
+    RemoveOrWithdrawConnection, toggleReadStatus, getNewNotificationCount
+} from "../controllers/user.controller.js";
 import upload from "../middleware/multer.middleware.js";
 import { verifyJWT } from "../middleware/auth.middleware.js";
 
-const router= Router()
+const router = Router()
 
 router.route("/register").post(
     upload.single("avatar"),
@@ -60,6 +64,11 @@ router.route("/RemoveOrWithdrawRequest").post(
 router.route("/toggleStatus").patch(
     verifyJWT,
     toggleReadStatus
+)
+
+router.route("/getNewNotificationCount").get(
+    verifyJWT,
+    getNewNotificationCount
 )
 
 export default router

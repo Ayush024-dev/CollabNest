@@ -64,7 +64,7 @@ const WritingTab = ({ type, onShowMsg, onShowError }) => {
                     height={48}
                     alt='icon'
                 />
-                <h1 className='text-white font-inconsolata'>Inscribe...</h1>
+                {type === "Post" ? <h1 className='text-white font-inconsolata'>Post...</h1> : <h1 className='text-white font-inconsolata'>Ideate...</h1>}
                 <Image
                     src="/assets/img/profile_blue.svg"
                     width={48}

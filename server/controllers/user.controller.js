@@ -377,7 +377,9 @@ const sendConnectionRequest = AsyncHandler(async (req, res) => {
 
         // Emit notification
         const io = req.app.get('io');
-        io.to(receiverId).emit('newNotification', encryptedNotification);
+        const encryptedRoom = encrypt(receiverId.toString());
+        io.to(encryptedRoom).emit('newNotification', encryptedNotification);
+        console.log('Emitted newNotification to room:', encryptedRoom, encryptedNotification);
 
         return res.json(
             new ApiResponse(200, encryptedNotification, "Connection request sent!!")
@@ -431,7 +433,14 @@ const AcceptOrRejectConnection = AsyncHandler(async (req, res) => {
 
             // Emit real-time notification to sender
             const io = req.app.get("io");
-            io.to(senderId.toString()).emit("newNotification", {
+            const encryptedRoom = encrypt(senderId.toString());
+            io.to(encryptedRoom).emit("newNotification", {
+                type: "connection_accepted",
+                from: myId,
+                createdAt: newNotification.createdAt,
+                notificationId: newNotification._id,
+            });
+            console.log('Emitted newNotification to room:', encryptedRoom, {
                 type: "connection_accepted",
                 from: myId,
                 createdAt: newNotification.createdAt,
@@ -583,6 +592,18 @@ const RemoveOrWithdrawConnection = AsyncHandler(async (req, res) => {
     }
 })
 
+
+const getNewNotificationCount = AsyncHandler(async (req, res) => {
+    try {
+        const myId = req.userId;
+        const count = await Notification.countDocuments({ user: myId, read: false });
+        return res.status(200).json({ count });
+    } catch (error) {
+        console.log(error);
+        throw new ApiError(500, error?.message || "Could not get notification count");
+    }
+});
+
 export {
     registerUser,
     verifyEmail,
@@ -596,5 +617,6 @@ export {
     AcceptOrRejectConnection,
     showNotifications,
     RemoveOrWithdrawConnection,
-    toggleReadStatus
+    toggleReadStatus,
+    getNewNotificationCount
 }

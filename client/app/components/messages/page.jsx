@@ -89,44 +89,66 @@ const Messages = () => {
   // Listen for online/offline events once
   useEffect(() => {
     const handleOnline = ({ userId }) => {
+      console.log('[Messages] Received userOnline:', userId);
       setStatusMap(prev => {
         const updated = { ...prev, [userId]: true };
         statusMapRef.current = updated;
+        console.log('[Messages] Updated statusMap:', updated);
         return updated;
       });
     };
     const handleOffline = ({ userId, timestamp }) => {
+      console.log('[Messages] Received userOffline:', userId, timestamp);
       setStatusMap(prev => {
         const updated = { ...prev, [userId]: timestamp };
         statusMapRef.current = updated;
+        console.log('[Messages] Updated statusMap:', updated);
         return updated;
       });
     };
+    
+    // Listen for logout events to reset status
+    const handleLogout = () => {
+      console.log('[Messages] Received logout event, resetting statusMap');
+      setStatusMap({});
+      statusMapRef.current = {};
+    };
+    
     socket.on("userOnline", handleOnline);
     socket.on("userOffline", handleOffline);
+    socket.on("logout", handleLogout);
+    
     return () => {
       socket.off("userOnline", handleOnline);
       socket.off("userOffline", handleOffline);
+      socket.off("logout", handleLogout);
     };
   }, []);
 
-  // Join/leave personal room for real-time status
+  // Join/leave message room for message notifications
   useEffect(() => {
     if (reqUserId) {
-      socket.emit('joinRoom', { room: reqUserId, type: "Personal" });
+      const messageRoom = reqUserId + "-message";
+      console.log('[Messages] Joining message room:', messageRoom);
+      socket.emit('joinRoom', { room: messageRoom, type: "Message" });
       return () => {
-        socket.emit('leaveRoom', { room: reqUserId, type: "Personal" });
+        console.log('[Messages] Leaving message room:', messageRoom);
+        socket.emit('leaveRoom', { room: messageRoom, type: "Message" });
       };
     }
   }, [reqUserId]);
 
-  // Fetch status for all contacts when users are loaded
+  // Fetch status for all contacts when users are loaded (only if not already set by real-time events)
   useEffect(() => {
     if (users && users.data && reqUserId) {
       const userIds = Object.keys(users.data).filter(id => id !== reqUserId);
       userIds.forEach(async (id) => {
+        // Only fetch from backend if we don't have real-time status
         if (statusMapRef.current[id] === undefined) {
+          console.log('[Messages] Fetching status for user:', id);
           await getStatus(id);
+        } else {
+          console.log('[Messages] Using cached status for user:', id, statusMapRef.current[id]);
         }
       });
     }
@@ -176,13 +198,19 @@ const Messages = () => {
         { withCredentials: true }
       );
       const lastSeen = response.data?.data?.lastSeen || null;
-      setStatusMap(prev => {
-        const updated = { ...prev, [userId]: lastSeen };
-        statusMapRef.current = updated;
-        return updated;
-      });
+      
+      // Only set the status if we don't already have real-time status
+      if (statusMapRef.current[userId] === undefined) {
+        setStatusMap(prev => {
+          const updated = { ...prev, [userId]: lastSeen };
+          statusMapRef.current = updated;
+          console.log('[Messages] Set initial status for user:', userId, lastSeen);
+          return updated;
+        });
+      }
       return lastSeen;
     } catch (e) {
+      console.error('[Messages] Error fetching status for user:', userId, e);
       return null;
     }
   };

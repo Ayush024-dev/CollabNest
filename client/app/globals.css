@@ -133,3 +133,19 @@ body {
 .custom-quill-editor .ql-toolbar .ql-picker {
   color: #fff;
 }
+
+.icon-hover-circle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: background 0.2s;
+  width: 58px;
+  height: 58px;
+}
+.icon-hover-circle:hover {
+  background: #fff;
+}
+.icon-hover-circle img {
+  z-index: 1;
+}

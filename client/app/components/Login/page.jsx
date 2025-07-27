@@ -9,6 +9,7 @@ import LinkedInIcon from '@mui/icons-material/LinkedIn';
 // import CheckBoxIcon from '@mui/icons-material/CheckBox';
 import { useRouter } from 'next/navigation';
 import LoadingPage from '../loading/page';
+import socket from '@/app/lib/socket';
 const Login = ({ onShowAlert, onShowError }) => {
   const [user, setUser] = useState({
     email: "",
@@ -35,6 +36,12 @@ const Login = ({ onShowAlert, onShowError }) => {
       console.log(userId.toString());
       onShowAlert(response.data.message);
       setLoading(false);
+
+      // Reconnect socket if it was disconnected
+      if (!socket.connected) {
+        socket.connect();
+        console.log('[Login] Socket reconnected after login');
+      }
 
       // Use searchParams to create the URL with query parameters
       // const url = `/components/feeds?id=${encodeURIComponent(userId.toString())}`;

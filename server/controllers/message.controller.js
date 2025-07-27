@@ -122,6 +122,8 @@ const sendMessage = AsyncHandler(async (req, res) => {
       encryptedMsg,
     });
 
+
+    // console.log("Emitted update_converse to room: ", encrypt(senderId.toString()));
     io.to(encrypt(senderId.toString())).emit("update_converse", {
       conversation: {
         sender: encrypt(senderId.toString()),
@@ -136,6 +138,7 @@ const sendMessage = AsyncHandler(async (req, res) => {
         updatedAt: message.updatedAt || new Date().toISOString(),
       }
     });
+    // console.log("Emitted update_converse to room: ", encrypt(receiverId.toString()));
     io.to(encrypt(receiverId.toString())).emit("update_converse", {
       conversation: {
         sender: encrypt(senderId.toString()),
@@ -153,9 +156,17 @@ const sendMessage = AsyncHandler(async (req, res) => {
 
     // Message notification logic
     const encryptedReceiverId = encrypt(receiverId.toString());
-    const socketsInReceiverRoom = io.sockets.adapter.rooms.get(encryptedReceiverId);
-    if (!socketsInReceiverRoom || socketsInReceiverRoom.size === 0) {
-      // Receiver is not online, create notification
+    const messageRoom = encryptedReceiverId + "-message";
+    const socketsInMessageRoom = io.sockets.adapter.rooms.get(messageRoom);
+    
+    console.log(`[Message Controller] Checking notification for receiver ${receiverId}`);
+    console.log(`[Message Controller] Message room: ${messageRoom}`);
+    console.log(`[Message Controller] Sockets in message room: ${socketsInMessageRoom ? socketsInMessageRoom.size : 0}`);
+    
+    // If user is not in message room (not actively viewing messages), send notification
+    if (!socketsInMessageRoom || socketsInMessageRoom.size === 0) {
+      console.log(`[Message Controller] User not in message room, creating notification`);
+      // Receiver is not in message page, create notification
       const notification = await Notification.create({
         user: receiverId,
         from: senderId,
@@ -167,7 +178,11 @@ const sendMessage = AsyncHandler(async (req, res) => {
         user: encrypt(notification.user.toString()),
         from: encrypt(notification.from.toString()),
       };
+      // Emit to personal room for real-time notification
+      console.log(`[Message Controller] Emitting newNotification to personal room: ${encryptedReceiverId}`);
       io.to(encryptedReceiverId).emit('newNotification', encryptedNotification);
+    } else {
+      console.log(`[Message Controller] User is in message room, no notification needed`);
     }
 
     return res
@@ -234,7 +249,7 @@ const lastConversation = AsyncHandler(async (req, res) => {
       receiver: encrypt(c.receiver.toString()),
     }));
 
-    console.log("encryptedConversations: ", encryptedConversations);
+    // console.log("encryptedConversations: ", encryptedConversations);
 
     return res.json(
       new ApiResponse(200, encryptedConversations, "Last conversation fetched successfully!!")

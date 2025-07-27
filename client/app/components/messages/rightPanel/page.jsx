@@ -82,12 +82,14 @@ const RightPanel = ({ users, onShowError, showId, reqUserId, getStatus, statusMa
     // Listen for userOnline/userOffline events and update status in real time
     useEffect(() => {
       const handleOnline = ({ userId }) => {
+        console.log('[RightPanel] Received userOnline:', userId);
         if (userId === showId) {
           setIsOnline(true);
           setLastSeen(null);
         }
       };
       const handleOffline = ({ userId, timestamp }) => {
+        console.log('[RightPanel] Received userOffline:', userId, timestamp);
         if (userId === showId) {
           setIsOnline(false);
           setLastSeen(timestamp);
@@ -105,13 +107,17 @@ const RightPanel = ({ users, onShowError, showId, reqUserId, getStatus, statusMa
     useEffect(() => {
       if (!showId) return;
       const status = getStatus(showId);
+      console.log('[RightPanel] Status update for', showId, ':', status, 'statusMap:', statusMap);
       if (status === true) {
+        console.log('[RightPanel] Setting user online:', showId);
         setIsOnline(true);
         setLastSeen(null);
       } else if (status) {
+        console.log('[RightPanel] Setting user offline with lastSeen:', showId, status);
         setIsOnline(false);
         setLastSeen(status);
       } else {
+        console.log('[RightPanel] Setting user offline (no lastSeen):', showId);
         setIsOnline(false);
         setLastSeen(null);
       }
@@ -129,6 +135,7 @@ const RightPanel = ({ users, onShowError, showId, reqUserId, getStatus, statusMa
       prevRoomRef.current = roomName;
 
       const handleNewMessage = (msg) => {
+        console.log('[RightPanel] Received newMessage:', msg);
         const message = msg.encryptedMsg || msg;
         // Only add message if it belongs to this chat
         if (
@@ -147,6 +154,7 @@ const RightPanel = ({ users, onShowError, showId, reqUserId, getStatus, statusMa
     // Listen for messageEdited event
     useEffect(() => {
       const handleMessageEdited = ({ messageId, newContent, timestamp }) => {
+        console.log('[RightPanel] Received messageEdited:', messageId, newContent);
         setMessages((prevMsgs) =>
           prevMsgs.map((msg) =>
             msg._id === messageId
@@ -164,6 +172,7 @@ const RightPanel = ({ users, onShowError, showId, reqUserId, getStatus, statusMa
     // Listen for delete_message event (delete for me and for everyone)
     useEffect(() => {
       const handleDeleteMessage = ({ messageId, type }) => {
+        console.log('[RightPanel] Received delete_message:', messageId, type);
         if (type === "delete_for_me" || type === "delete_for_everyone") {
           setMessages((prevMsgs) => prevMsgs.filter((msg) => msg._id !== messageId));
         }
