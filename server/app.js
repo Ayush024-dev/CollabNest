@@ -6,6 +6,7 @@ import { createServer } from "http"
 import LastConversations from "./models/conversation.model.js";
 import { encrypt, decrypt } from "./utils/encryption.js";
 import User from "./models/user.model.js";
+import Message from "./models/messages.model.js";
 
 
 const app = express();
@@ -171,6 +172,60 @@ io.on("connection", (socket) => {
         // console.log(`[Server] User logged out: ${socket.id}`);
         // Broadcast logout event to all clients
         io.emit('logout');
+    });
+
+    // Handle marking messages as read when chat is opened
+    socket.on('readMessages', async ({ conversationId }) => {
+        try {
+            // conversationId is the room name: [encA, encB].sort().join('-')
+            const [encA, encB] = conversationId.split('-');
+            const userId = decrypt(socket.userRoom); // The receiver (current user)
+            const contactId = (decrypt(encA) === userId) ? decrypt(encB) : decrypt(encA);
+
+            // Mark all unread messages as read
+            await Message.updateMany({
+                sender: contactId,
+                receiver: userId,
+                read: false
+            }, { $set: { read: true } });
+
+            // Find the last message in this conversation
+            const lastMsg = await Message.findOne({
+                $or: [
+                    { sender: contactId, receiver: userId },
+                    { sender: userId, receiver: contactId }
+                ]
+            }).sort({ updatedAt: -1 });
+
+            // Emit to update UI for receiver
+            io.to(socket.userRoom).emit('unreadCountReset', { conversationId });
+
+            if (lastMsg) {
+                // Emit update_converse to the sender's personal room
+                io.to(encrypt(lastMsg.sender)).emit('update_converse', {
+                    conversation: {
+                        sender: encrypt(contactId),
+                        receiver: encrypt(userId),
+                        lastMessage: {
+                            messageId: lastMsg._id,
+                            content: lastMsg.content,
+                            fileUrl: lastMsg.fileUrl,
+                            type: lastMsg.type,
+                            read: true,
+                            timestamp: lastMsg.updatedAt,
+                        },
+                        updatedAt: lastMsg.updatedAt,
+                    }
+                });
+                // Emit messageRead for the last message to the sender for right panel tick
+                io.to(encrypt(contactId)).emit('messageRead', {
+                    messageId: lastMsg._id,
+                    conversationId
+                });
+            }
+        } catch (e) {
+            // console.log('[Server] Error in readMessages handler:', e);
+        }
     });
 })
 

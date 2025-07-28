@@ -2,7 +2,7 @@
 import axios from "axios";
 import React, { useEffect, useState } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Image, Video, FilesIcon } from "lucide-react";
+import { Image, Video, FilesIcon, Check } from "lucide-react";
 import SearchBar from "./SearchBar/page";
 import socket from "@/app/lib/socket";
 
@@ -97,10 +97,35 @@ const LeftPanel = ({ users, onShowError, SetshowId, reqUserId, initialTarget, sh
           ));
         };
         socket.on("delete_converse", handleDeleteConverse);
+
+        // Real-time increment unread count
+        const handleIncrementUnread = ({ conversationId }) => {
+          setConversations(prev => prev.map(convo =>
+            convo._id === conversationId ||
+            ([convo.sender, convo.receiver].sort().join('-') === conversationId)
+              ? { ...convo, unreadCount: (convo.unreadCount || 0) + 1 }
+              : convo
+          ));
+        };
+        socket.on('incrementUnread', handleIncrementUnread);
+
+        // Real-time reset unread count
+        const handleUnreadCountReset = ({ conversationId }) => {
+          setConversations(prev => prev.map(convo =>
+            convo._id === conversationId ||
+            ([convo.sender, convo.receiver].sort().join('-') === conversationId)
+              ? { ...convo, unreadCount: 0 }
+              : convo
+          ));
+        };
+        socket.on('unreadCountReset', handleUnreadCountReset);
+
         return () => {
           socket.off("update_converse", handleUpdateConverse);
           socket.off("edit_converse", handleEditConverse);
           socket.off("delete_converse", handleDeleteConverse);
+          socket.off('incrementUnread', handleIncrementUnread);
+          socket.off('unreadCountReset', handleUnreadCountReset);
         };
     }, []);
 
@@ -196,10 +221,18 @@ const LeftPanel = ({ users, onShowError, SetshowId, reqUserId, initialTarget, sh
                                 }`}>
                                     {formatTimeOrDate(converse.updatedAt)}
                                 </span>
+                                {converse.unreadCount > 0 && (
+                                  <span className="ml-2 inline-flex items-center justify-center px-2 py-0.5 rounded-full text-xs font-bold bg-blue-500 text-white min-w-[20px]">
+                                    {converse.unreadCount}
+                                  </span>
+                                )}
                             </div>
                             <p className={`text-xs sm:text-sm truncate flex items-center gap-1 ${
                                 isSelected ? 'text-blue-700' : 'text-slate-600'
                             }`}>
+                                {converse.sender === reqUserId && lastMessage?.read && (
+                                    <Check className="w-3 h-3 sm:w-4 sm:h-4 text-blue-500 flex-shrink-0" />
+                                )}
                                 {lastMessage?.type === "text" && lastMessage.content}
 
                                 {lastMessage?.type === "image" && (

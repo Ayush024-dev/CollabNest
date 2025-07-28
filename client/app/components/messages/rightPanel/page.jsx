@@ -5,7 +5,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 // import socket from "@/lib/socket";
 import socket from "@/app/lib/socket";
 import InputMessage from "../InputMessage/page";
-import { MoreHorizontal, ArrowDown } from "lucide-react";
+import { MoreHorizontal, ArrowDown, Check } from "lucide-react";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 
 const RightPanel = ({ users, onShowError, showId, reqUserId, getStatus, statusMap }) => {
@@ -125,17 +125,30 @@ const RightPanel = ({ users, onShowError, showId, reqUserId, getStatus, statusMa
       }
     }, [showId, statusMap]);
 
+    // Track and manage chat room join/leave for accurate presence
+    const chatRoomRef = useRef(null);
     useEffect(() => {
       if (!showId || !reqUserId) return;
       const roomName = [reqUserId, showId].sort().join('-');
-      // Leave previous room if any
-      if (prevRoomRef.current && prevRoomRef.current !== roomName) {
-        socket.emit('leaveRoom', { room: prevRoomRef.current, type: "Chat" });
-      }
-      // Join new room
-      socket.emit('joinRoom', { room: roomName, type: "Chat" });
-      prevRoomRef.current = roomName;
 
+      // Leave previous chat room if any
+      if (chatRoomRef.current && chatRoomRef.current !== roomName) {
+        socket.emit('leaveRoom', { room: chatRoomRef.current, type: 'Chat' });
+      }
+      // Join new chat room
+      socket.emit('joinRoom', { room: roomName, type: 'Chat' });
+      chatRoomRef.current = roomName;
+
+      // On unmount, leave the current chat room
+      return () => {
+        if (chatRoomRef.current) {
+          socket.emit('leaveRoom', { room: chatRoomRef.current, type: 'Chat' });
+          chatRoomRef.current = null;
+        }
+      };
+    }, [showId, reqUserId]);
+
+    useEffect(() => {
       const handleNewMessage = (msg) => {
         console.log('[RightPanel] Received newMessage:', msg);
         const message = msg.encryptedMsg || msg;
@@ -184,6 +197,33 @@ const RightPanel = ({ users, onShowError, showId, reqUserId, getStatus, statusMa
         socket.off("delete_message", handleDeleteMessage);
       };
     }, []);
+
+    // Add this useEffect after the existing socket listeners
+    useEffect(() => {
+      const handleMessageRead = ({ messageId, conversationId }) => {
+        console.log('[RightPanel] Received messageRead:', messageId, conversationId);
+        setMessages((prevMsgs) =>
+          prevMsgs.map((msg) =>
+            msg._id === messageId
+              ? { ...msg, read: true }
+              : msg
+          )
+        );
+      };
+      
+      socket.on("messageRead", handleMessageRead);
+      return () => {
+        socket.off("messageRead", handleMessageRead);
+      };
+    }, []);
+
+    // Emit 'readMessages' when the user opens a chat
+    useEffect(() => {
+      if (showId && reqUserId) {
+        const roomName = [reqUserId, showId].sort().join('-');
+        socket.emit('readMessages', { conversationId: roomName });
+      }
+    }, [showId, reqUserId]);
 
     if(!showId) {
       return (
@@ -251,7 +291,7 @@ const RightPanel = ({ users, onShowError, showId, reqUserId, getStatus, statusMa
           const replySnippet = msg.replyTo
             ? (() => {
                 const original = messages.find(m => m._id === msg.replyTo);
-                if (!original) return <div className="text-xs italic text-gray-400 border-l-4 border-gray-300 pl-2 mb-1">Original message not found</div>;
+                if (!original) return <div className="text-xs italic text-black-400 border-l-4 border-gray-300 pl-2 mb-1">Original message not found</div>;
                 let preview = original.content;
                 if (original.type === "image") preview = "[Image]";
                 if (original.type === "video") preview = "[Video]";
@@ -272,7 +312,7 @@ const RightPanel = ({ users, onShowError, showId, reqUserId, getStatus, statusMa
                       }
                     }}
                   >
-                    <span className="font-semibold text-blue-600">Replying to:</span> {preview}
+                    <span className="font-semibold text-blue-600">Replying to:</span> <span className="text-black">{preview}</span>
                   </div>
                 );
               })()
@@ -418,7 +458,7 @@ const RightPanel = ({ users, onShowError, showId, reqUserId, getStatus, statusMa
                       className="flex items-center gap-2"
                     >
                       <input
-                        className="flex-1 border rounded px-2 py-1 text-sm"
+                        className="flex-1 border rounded px-2 py-1 text-sm text-black"
                         value={editContent}
                         autoFocus
                         onChange={e => setEditContent(e.target.value)}
@@ -499,6 +539,9 @@ const RightPanel = ({ users, onShowError, showId, reqUserId, getStatus, statusMa
                     <span className={`text-xs ${isSender ? 'text-blue-200' : 'text-slate-500'}`}>
                       {formattedTime}
                     </span>
+                    {isSender && msg.read && (
+                      <Check className="w-3 h-3 text-white ml-1" strokeWidth={3} />
+                    )}
                   </div>
                 </div>
               </div>

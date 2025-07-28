@@ -56,14 +56,21 @@ const sendMessage = AsyncHandler(async (req, res) => {
 
     const message = await Message.create(messageData);
 
+    const io = req.app.get("io");
+    const roomName = [encrypt(senderId.toString()), encrypt(receiverId.toString())].sort().join('-');
+    const socketsInRoom = io.sockets.adapter.rooms.get(roomName);
+    const receiverIsPresent = socketsInRoom && socketsInRoom.size === 2;
+
     // Setting or updating last conversation 
 
     // This is when sender is me and receiver is other user
     await LastConversations.findOneAndUpdate(
-      { owner: senderId, $or: [
-        { sender: senderId, receiver: receiverId },
-        { sender: receiverId, receiver: senderId }
-      ] },
+      {
+        owner: senderId, $or: [
+          { sender: senderId, receiver: receiverId },
+          { sender: receiverId, receiver: senderId }
+        ]
+      },
       {
         sender: senderId,
         receiver: receiverId,
@@ -72,7 +79,7 @@ const sendMessage = AsyncHandler(async (req, res) => {
           content,
           fileUrl: file?.url || "",
           type,
-          read: false,
+          read: receiverIsPresent,
         },
       },
       { upsert: true, new: true }
@@ -80,10 +87,12 @@ const sendMessage = AsyncHandler(async (req, res) => {
 
     // this is when other user is sender and I am receiver
     await LastConversations.findOneAndUpdate(
-      { owner: receiverId, $or: [
-        { sender: senderId, receiver: receiverId },
-        { sender: receiverId, receiver: senderId }
-      ] },
+      {
+        owner: receiverId, $or: [
+          { sender: senderId, receiver: receiverId },
+          { sender: receiverId, receiver: senderId }
+        ]
+      },
       {
         sender: senderId,
         receiver: receiverId,
@@ -92,7 +101,7 @@ const sendMessage = AsyncHandler(async (req, res) => {
           content,
           fileUrl: file?.url || "",
           type,
-          read: false,
+          read: receiverIsPresent,
         },
       },
       { upsert: true, new: true }
@@ -115,13 +124,33 @@ const sendMessage = AsyncHandler(async (req, res) => {
     };
 
 
-    const io = req.app.get("io");
-    const roomName = [encrypt(senderId.toString()), encrypt(receiverId.toString())].sort().join('-');
+
     // console.log(`Emitted newMessage to room ${roomName}`);
     io.to(roomName).emit("newMessage", {
       encryptedMsg,
     });
 
+    // Check if receiver is present in the chat room for real-time read status
+ // Both sender and receiver are present
+
+
+
+    if (receiverIsPresent) {
+      // Receiver is viewing the chat, mark message as read immediately
+      message.read = true;
+      await message.save();
+      
+      // Emit messageRead event to the sender for real-time UI update
+      io.to(encrypt(senderId.toString())).emit('messageRead', { 
+        messageId: message._id,
+        conversationId: roomName 
+      });
+    } else {
+      // Receiver is not present, increment unread count in real time
+      io.to(encrypt(receiverId.toString())).emit('incrementUnread', {
+        conversationId: roomName
+      });
+    }
 
     // console.log("Emitted update_converse to room: ", encrypt(senderId.toString()));
     io.to(encrypt(senderId.toString())).emit("update_converse", {
@@ -132,7 +161,7 @@ const sendMessage = AsyncHandler(async (req, res) => {
           content,
           fileUrl: file?.url || "",
           type,
-          read: false,
+          read: receiverIsPresent,
           messageId: message._id
         },
         updatedAt: message.updatedAt || new Date().toISOString(),
@@ -147,7 +176,7 @@ const sendMessage = AsyncHandler(async (req, res) => {
           content,
           fileUrl: file?.url || "",
           type,
-          read: false,
+          read: receiverIsPresent,
           messageId: message._id
         },
         updatedAt: message.updatedAt || new Date().toISOString(),
@@ -158,14 +187,14 @@ const sendMessage = AsyncHandler(async (req, res) => {
     const encryptedReceiverId = encrypt(receiverId.toString());
     const messageRoom = encryptedReceiverId + "-message";
     const socketsInMessageRoom = io.sockets.adapter.rooms.get(messageRoom);
-    
-    console.log(`[Message Controller] Checking notification for receiver ${receiverId}`);
-    console.log(`[Message Controller] Message room: ${messageRoom}`);
-    console.log(`[Message Controller] Sockets in message room: ${socketsInMessageRoom ? socketsInMessageRoom.size : 0}`);
-    
+
+    // console.log(`[Message Controller] Checking notification for receiver ${receiverId}`);
+    // console.log(`[Message Controller] Message room: ${messageRoom}`);
+    // console.log(`[Message Controller] Sockets in message room: ${socketsInMessageRoom ? socketsInMessageRoom.size : 0}`);
+
     // If user is not in message room (not actively viewing messages), send notification
     if (!socketsInMessageRoom || socketsInMessageRoom.size === 0) {
-      console.log(`[Message Controller] User not in message room, creating notification`);
+      // console.log(`[Message Controller] User not in message room, creating notification`);
       // Receiver is not in message page, create notification
       const notification = await Notification.create({
         user: receiverId,
@@ -242,11 +271,31 @@ const lastConversation = AsyncHandler(async (req, res) => {
 
     const LastConverse = await LastConversations.find({ owner: myId }).sort({ updatedAt: -1 });
 
-    const encryptedConversations = LastConverse.map((c) => ({
-      ...c.toObject(),
-      owner: encrypt(c.owner.toString()),
-      sender: encrypt(c.sender.toString()),
-      receiver: encrypt(c.receiver.toString()),
+    const encryptedConversations = await Promise.all(LastConverse.map(async (c) => {
+      // Find the other user in the conversation
+      const contactId = c.sender.toString() === myId.toString() ? c.receiver : c.sender;
+
+      // Count unread messages from this contact to the current user
+      const myMessages = await Message.find({
+        sender: contactId,
+        receiver: myId,
+      }).sort({ updatedAt: -1 }).select("read");
+
+      let unreadCount = 0;
+      for (const msg of myMessages) {
+        if (msg.read) {
+          break;
+        }
+        unreadCount++;
+      }
+
+      return {
+        ...c.toObject(),
+        owner: encrypt(c.owner.toString()),
+        sender: encrypt(c.sender.toString()),
+        receiver: encrypt(c.receiver.toString()),
+        unreadCount
+      };
     }));
 
     // console.log("encryptedConversations: ", encryptedConversations);
@@ -285,9 +334,9 @@ const EditMessage = AsyncHandler(async (req, res) => {
       throw new ApiError(404, "Message not found");
     }
 
-    const myId=req.userId;
+    const myId = req.userId;
 
-    if(message.sender.toString() !== myId.toString()){
+    if (message.sender.toString() !== myId.toString()) {
       throw new ApiError(403, "You are not allowed to edit this message");
     }
 
@@ -477,7 +526,7 @@ const DeleteMessageForEveryone = AsyncHandler(async (req, res) => {
       throw new ApiError(404, "Message not found");
     }
 
-    if(message.sender.toString() !== myId.toString()){
+    if (message.sender.toString() !== myId.toString()) {
       throw new ApiError(403, "You are not allowed to delete this message");
     }
 
