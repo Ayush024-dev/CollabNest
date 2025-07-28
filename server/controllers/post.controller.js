@@ -389,10 +389,17 @@ const postReplies = AsyncHandler(async (req, res) => {
 
         const updatedComment = await comment.save();
 
+        // Get the newly added reply (last one in the array)
+        const newReplyObj = updatedComment.replies[updatedComment.replies.length - 1];
 
+        // Create encrypted reply object for socket emission
+        const encryptedReply = {
+            ...newReplyObj.toObject(),
+            replyingId: encrypt(newReplyObj.replyingId.toString()),
+        };
 
         const io = req.app.get('io');
-        io.emit("newReply", { commentId, reply });
+        io.emit("newReply", { commentId, reply: encryptedReply });
 
         console.log("reply posted")
 
