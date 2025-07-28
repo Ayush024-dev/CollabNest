@@ -8,7 +8,7 @@ import GoogleIcon from '@mui/icons-material/Google';
 import LinkedInIcon from '@mui/icons-material/LinkedIn';
 // import CheckBoxIcon from '@mui/icons-material/CheckBox';
 
-const Signup = ({ onShowAlert, onShowError }) => {
+const Signup = ({ onShowAlert, onShowError, closeSignup }) => {
   const [user, setUser] = useState({
     name: "",
     email: "",
@@ -42,12 +42,17 @@ const Signup = ({ onShowAlert, onShowError }) => {
       setLoading(false);
       console.log("Signup success", response.data);
 
-      // setMsg(response.data.message)
-      onShowAlert(response.data.message)
+      // Show success alert
+      onShowAlert(response.data.message);
+      
+      // Automatically close signup component after successful signup
+      setTimeout(() => {
+        closeSignup();
+      }, 1000); // Close after 1 second so user can see the success message
+      
     } catch (error) {
       console.log("signup failed", error);
       setLoading(false)
-      // setError(error);
       onShowError(error.response.data || "Sign up failed")
     }
   }

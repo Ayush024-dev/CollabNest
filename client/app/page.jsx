@@ -83,7 +83,7 @@ const Home = () => {
         <div className={`signup z-40 absolute flex justify-center items-center inset-0 transition-opacity duration-500 ease-in-out 
         ${showSignup ? 'opacity-100 visible' : 'opacity-0 invisible'}`}>
             
-            <Signup onShowError={handleErrorAlert} onShowAlert={handleShowAlert} />
+            <Signup onShowError={handleErrorAlert} onShowAlert={handleShowAlert} closeSignup={handleClose} />
           
         </div>
       )}

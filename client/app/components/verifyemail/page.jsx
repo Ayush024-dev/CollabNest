@@ -21,7 +21,7 @@ const VerifyEmail = () => {
       setLoading(false);
       setTimeout(() => {
         router.push('/components/aboutYou')
-      }, 1000);
+      }, 500);
     } catch (error) {
       setLoading(false);
       setError(error.response?.data || 'Verification failed. Please try again.');
@@ -35,7 +35,7 @@ const VerifyEmail = () => {
     setToken(urlToken || "");
   }, [])
   return (
-    <div className="page h-full w-full flex justify-center items-center">
+    <div className="page h-full w-full flex justify-center items-center bg-black">
       <div className="nav absolute top-1 left-1 w-full">
         <NavBar />
       </div>

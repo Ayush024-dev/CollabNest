@@ -1,7 +1,7 @@
 "use client"
 import React, { useState } from 'react';
 import NavBar from '../nav/page';
-import { Input, Button } from '@mui/joy';
+import { Input, Button, Textarea } from '@mui/joy';
 import Image from 'next/image';
 import axios from 'axios';
 import CheckBoxIcon from '@mui/icons-material/CheckBox';
@@ -13,6 +13,7 @@ const AboutYou = () => {
     username:"",
     designation:"",
     institute: "",
+    Bio: ""
   })
   const [error, setError]=useState("");
   const [msg, setMsg]=useState("");
@@ -106,6 +107,14 @@ const AboutYou = () => {
               variant='solid'
               className='w-5/6'
 
+            />
+            <Textarea
+              placeholder='Bio...'
+              id='bio'
+              value={user.Bio}
+              onChange={(e) => setuser({ ...user, Bio: e.target.value })}
+              variant='solid'
+              className='w-5/6'
             />
             <Button color='success' onClick={onSubmitData} className='w-2/5 text-center' >Go Ahead</Button>
           </div>

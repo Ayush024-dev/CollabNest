@@ -374,7 +374,7 @@ const ProfilePage = () => {
 
                 <div className="bio-text flex-1 flex items-center">
                   <p className='text-black font-medium text-sm leading-relaxed'>
-                    {user?.bio || 'No bio available'}
+                    {user?.Bio || 'No bio available'}
                   </p>
                 </div>
               </div>
