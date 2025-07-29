@@ -98,6 +98,10 @@ const ProfilePage = () => {
     initialize();
   }, []);
 
+  useEffect(() => {
+    const userName = (user && user.name) || 'CollabNest - Profile';
+    document.title = userName;
+  }, [user]);
 
 
   const handleShowAlert = (message) => {
@@ -194,6 +198,7 @@ const ProfilePage = () => {
   const handleLogoutCancel = () => {
     setShowLogoutDialog(false);
   };
+
 
   return (
     <div className='min-h-screen w-full flex flex-col bg-slate-600 relative'>

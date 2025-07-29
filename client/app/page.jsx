@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import "./globals.css";
 import Image from "next/image";
 import Signup from "./components/Signup/page.jsx";
@@ -9,13 +9,16 @@ import CheckBoxIcon from "@mui/icons-material/CheckBox";
 import ErrorIcon from "@mui/icons-material/Error";
 import CancelIcon from "@mui/icons-material/Cancel";
 
-
 const Home = () => {
   const [msg, setMsg] = useState("");
   const [error, setError] = useState("");
   const [showLogin, setShowLogin] = useState(false);
   const [showSignup, setShowSignup] = useState(false);
   const [blur, setBlur] = useState(false);
+
+  useEffect(() => {
+    document.title = "CollabNest";
+  }, []);
 
   const handleShowAlert = (message) => {
     setMsg(message);

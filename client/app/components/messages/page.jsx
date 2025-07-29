@@ -232,6 +232,10 @@ const Messages = () => {
     fetchUsers();
   }, []);
 
+  useEffect(() => {
+    document.title = "CollabNest - Message";
+  }, []);
+
   if (!auth) {
     return (
       <div className="w-full h-screen flex items-center justify-center text-red-500 text-xl">

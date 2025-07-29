@@ -129,8 +129,8 @@ const NavBar = ({ profileLink }) => {
                   className="text-gray-300 hover:text-white font-mono block px-3 py-2 rounded-md text-base font-medium transition duration-150 hover:bg-gray-800 w-full text-left flex items-center space-x-3"
                   onClick={() => { handleNavigation('/components/feeds'); }}
                 >
-                  <Info size={18} />
-                  <span>About Us</span>
+                  <Newspaper size={18} />
+                  <span>Feeds</span>
                 </button>
                 <button
                   className="text-gray-300 hover:text-white font-mono block px-3 py-2 rounded-md text-base font-medium transition duration-150 hover:bg-gray-800 w-full text-left flex items-center space-x-3"

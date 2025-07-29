@@ -27,7 +27,6 @@ import ErrorIcon from "@mui/icons-material/Error";
 import LogoutIcon from '@mui/icons-material/Logout';
 import { useRef } from 'react';
 
-
 const Feeds = () => {
   const [open, setOpen] = useState(false);
   const [type, setType] = useState("");
@@ -158,6 +157,10 @@ const Feeds = () => {
     }
     initialize();
   }, [])
+
+  useEffect(() => {
+    document.title = "CollabNest - Feeds";
+  }, []);
 
   const joinedRoomRef = useRef(false);
 
