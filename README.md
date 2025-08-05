@@ -130,7 +130,7 @@ Create `.env` files in both `client` and `server` directories:
 
 ```bash
 # In server/.env
-PORT=5000
+PORT=8080
 MONGODB_URI=your_mongodb_connection_string
 JWT_SECRET=your_jwt_secret
 CLOUDINARY_CLOUD_NAME=your_cloudinary_name
