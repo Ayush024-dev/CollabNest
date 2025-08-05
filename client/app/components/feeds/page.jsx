@@ -96,7 +96,7 @@ const Feeds = () => {
 
   const getUsersInfo = async () => {
     try {
-      const response = await axios.get('http://localhost:8080/api/v1/users/allUserInfo');
+      const response = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/users/allUserInfo`);
       console.log("This one:", typeof (response.data))
       getusers(response);
     } catch (error) {
@@ -118,7 +118,7 @@ const Feeds = () => {
         joinedRoomRef.current = false;
         console.log('[Feeds] Left personal room on logout:', userid);
       }
-      await axios.post('http://localhost:8080/api/v1/users/logOut', {}, { withCredentials: true });
+      await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/users/logOut`, {}, { withCredentials: true });
       localStorage.removeItem('user');
       
       // Emit logout event to reset status on other pages
@@ -145,7 +145,7 @@ const Feeds = () => {
 
   useEffect(() => {
     const initialize = async () => {
-      const userResponse = await axios.get('http://localhost:8080/api/v1/users/isLoggedIn', {
+      const userResponse = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/users/isLoggedIn`, {
         withCredentials: true,
       });
 
@@ -192,7 +192,7 @@ const Feeds = () => {
 
   useEffect(() => {
     // Fetch initial unread count
-    axios.get('http://localhost:8080/api/v1/users/showNotification', { withCredentials: true })
+    axios.get(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/users/showNotification`, { withCredentials: true })
       .then(res => {
         const notifications = res.data.data || [];
         const unreadCount = notifications.filter(n => n.read === false).length;

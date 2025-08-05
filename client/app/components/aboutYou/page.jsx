@@ -21,7 +21,7 @@ const AboutYou = () => {
 
   const onSubmitData= async()=>{
     try {
-      const response=await axios.post("http://localhost:8080/api/v1/users/aboutYou",user, {withCredentials:true})
+      const response=await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/users/aboutYou`,user, {withCredentials:true})
 
       console.log("data submitted")
 

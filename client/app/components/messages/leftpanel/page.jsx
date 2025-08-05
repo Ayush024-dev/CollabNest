@@ -12,7 +12,7 @@ const LeftPanel = ({ users, onShowError, SetshowId, reqUserId, initialTarget, sh
     const getLastConverse = async () => {
         try {
             const response = await axios.get(
-                "http://localhost:8080/api/v1/message/GetLastConversation",
+                `${process.env.NEXT_PUBLIC_API_URL}/api/v1/message/GetLastConversation`,
                 { withCredentials: true }
             );
 
@@ -181,7 +181,7 @@ const LeftPanel = ({ users, onShowError, SetshowId, reqUserId, initialTarget, sh
             <SearchBar users={users} onShowError={onShowError} reqUserId={reqUserId} />
             {displayConversations.map((converse) => {
                 const otherUserId = (converse.sender!= reqUserId)? converse.sender : converse.receiver; 
-                const user = users.data[otherUserId];
+                const user = users?.data[otherUserId];
                 const lastMessage = converse?.lastMessage;
                 const isSelected = showId === otherUserId;
 

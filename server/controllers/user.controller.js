@@ -8,6 +8,7 @@ import { ApiError } from "../utils/ApiError.js";
 import { AsyncHandler } from "../utils/asyncHandler.js";
 import { sendEmail } from "../utils/mailer.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
+import { delete_from_cloudinary } from "../utils/Delete_from_cloudinary.js";
 import fs from 'fs/promises';
 import { encrypt, decrypt } from "../utils/encryption.js";
 
@@ -329,6 +330,61 @@ const alluserInfo = AsyncHandler(async (req, res) => {
     }
 });
 
+const updateProfile= AsyncHandler(async (req, res)=>{
+    try {
+        const {name, username, email, highlights, designation, institute, Bio}= req.body;
+
+        const user= await User.findById(req.userId);
+
+        if(!user) throw new ApiError(404, "User not found");
+
+        let avatarLocalPath;
+        let avatar;
+        if(req.file){
+            
+            if(user.avatar){
+                const fileUrl= user.avatar
+                const urlParts = fileUrl.split("/");
+                try {
+                    const uploadIndex= urlParts.findIndex(part=> part==="upload");
+                    if(uploadIndex!==-1 && urlParts.length>uploadIndex+1){
+                        const publicIdWithExt= urlParts.slice(uploadIndex+1).join("/");
+                        const lastDot= publicIdWithExt.lastIndexOf(".");
+                        const publicId= lastDot!==-1? publicIdWithExt.substring(0, lastDot): publicIdWithExt;
+                        await delete_from_cloudinary(publicId);
+                    }
+                } catch (error) {
+                    console.error("Failed to extract public_id or delete from Cloudinary:", error);
+                }
+            }
+            avatarLocalPath= req.file.path;
+            avatar= await uploadOnCloudinary(avatarLocalPath);
+        }
+
+        user.name= name;
+        user.username= username;
+        user.email= email;
+        user.highlights= highlights;
+        user.designation= designation;
+        user.institute= institute;
+        user.Bio= Bio;
+        user.avatar= avatar?.url || user.avatar;
+
+        try {
+            await fs.unlink(avatarLocalPath);
+            console.log("Local file removed successfully.");
+        } catch (unlinkError) {
+            console.error("Failed to delete local file:", unlinkError);
+        }
+        await user.save();
+
+        return res.status(200).json({message: "Profile updated successfully", user});
+    } catch (error) {
+        console.log(error);
+        throw new ApiError(500, error?.message || "Cannot update profile");
+    }
+})
+
 // Connection Request and Notification
 
 const sendConnectionRequest = AsyncHandler(async (req, res) => {
@@ -618,5 +674,6 @@ export {
     showNotifications,
     RemoveOrWithdrawConnection,
     toggleReadStatus,
-    getNewNotificationCount
+    getNewNotificationCount,
+    updateProfile
 }

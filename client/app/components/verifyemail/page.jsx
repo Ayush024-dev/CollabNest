@@ -15,7 +15,7 @@ const VerifyEmail = () => {
   const verifyEmail = async () => {
     try {
       setLoading(true);
-      const user = await axios.post('http://localhost:8080/api/v1/users/verifyemail', { token }, { withCredentials: true });
+      const user = await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/users/verifyemail`, { token }, { withCredentials: true });
       console.log("verified")
       setverified(user.isVerified);
       setLoading(false);

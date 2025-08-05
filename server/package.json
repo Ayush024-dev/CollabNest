@@ -12,7 +12,7 @@
   "license": "ISC",
   "dependencies": {
     "base-x": "^5.0.1",
-    "bcrypt": "^5.1.1",
+    "bcryptjs": "^3.0.2",
     "body-parser": "^1.20.3",
     "cloudinary": "^2.5.1",
     "cookie-parser": "^1.4.7",

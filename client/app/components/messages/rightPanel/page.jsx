@@ -26,7 +26,7 @@ const RightPanel = ({ users, onShowError, showId, reqUserId, getStatus, statusMa
         if (!showId) return;
   
         const response = await axios.post(
-          "http://localhost:8080/api/v1/message/GetMessage",
+          `${process.env.NEXT_PUBLIC_API_URL}/api/v1/message/GetMessage`,
           { encryptedId: showId },
           { withCredentials: true }
         );
@@ -351,7 +351,7 @@ const RightPanel = ({ users, onShowError, showId, reqUserId, getStatus, statusMa
                           try {
                             const roomName = [reqUserId, showId].sort().join('-');
                             await axios.patch(
-                              "http://localhost:8080/api/v1/message/DeleteMessageForMe",
+                              `${process.env.NEXT_PUBLIC_API_URL}/api/v1/message/DeleteMessageForMe`,
                               {
                                 messageId: msg._id,
                                 type: "delete_for_me",
@@ -369,7 +369,7 @@ const RightPanel = ({ users, onShowError, showId, reqUserId, getStatus, statusMa
                           try {
                             const roomName = [reqUserId, showId].sort().join('-');
                             await axios.delete(
-                              "http://localhost:8080/api/v1/message/DeleteMessageForEveryone",
+                              `${process.env.NEXT_PUBLIC_API_URL}/api/v1/message/DeleteMessageForEveryone`,
                               {
                                 data: {
                                   messageId: msg._id,
@@ -405,7 +405,7 @@ const RightPanel = ({ users, onShowError, showId, reqUserId, getStatus, statusMa
                         try {
                           const roomName = [reqUserId, showId].sort().join('-');
                           await axios.patch(
-                            "http://localhost:8080/api/v1/message/DeleteMessageForMe",
+                            `${process.env.NEXT_PUBLIC_API_URL}/api/v1/message/DeleteMessageForMe`,
                             {
                               messageId: msg._id,
                               type: "delete_for_me",
@@ -441,7 +441,7 @@ const RightPanel = ({ users, onShowError, showId, reqUserId, getStatus, statusMa
                         try {
                           const roomName = [reqUserId, showId].sort().join('-');
                           await axios.patch(
-                            "http://localhost:8080/api/v1/message/EditMessage",
+                            `${process.env.NEXT_PUBLIC_API_URL}/api/v1/message/EditMessage`,
                             {
                               messageId: msg._id,
                               newContent: editContent,

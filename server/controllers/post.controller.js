@@ -152,7 +152,7 @@ const showPosts = AsyncHandler(async (req, res) => {
         // Step 5: Prepare initialLikes map for frontend
         const initialLikes = new Map();
         posts.forEach(p => {
-            if (p.likes && p.likes.has(decryptedUserId)) {
+            if (p.likes && p.likes.has(loggedInUser._id.toString())) {
                 initialLikes.set(p._id.toString(), true);
             }
         });

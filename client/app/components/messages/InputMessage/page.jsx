@@ -1,3 +1,4 @@
+"use client"
 import React, { useState, useRef } from "react";
 import axios from "axios";
 import { Smile, Paperclip, Send } from "lucide-react";
@@ -62,7 +63,7 @@ const InputMessage = ({ receiverId, onSend, onShowError, replyToMsg, clearReplyT
       }
 
       const response = await axios.post(
-        "http://localhost:8080/api/v1/message/SendMessage",
+        `${process.env.NEXT_PUBLIC_API_URL}/api/v1/message/SendMessage`,
         formData,
         {
           withCredentials: true,

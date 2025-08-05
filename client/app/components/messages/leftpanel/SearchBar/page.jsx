@@ -13,7 +13,7 @@ const SearchBar = ({ users, onShowError, reqUserId }) => {
   // Build a name -> [{ user_id, avatar }] map for duplicate names
   const nameMap = useMemo(() => {
     const map = {};
-    Object.entries(users.data || {}).forEach(([user_id, user]) => {
+    Object.entries(users?.data || {}).forEach(([user_id, user]) => {
       if (!user || user_id === reqUserId) return; // skip self
       if (!map[user.name]) map[user.name] = [];
       map[user.name].push({ user_id, avatar: user.avatar });
@@ -41,7 +41,7 @@ const SearchBar = ({ users, onShowError, reqUserId }) => {
     setLoading(true);
     try {
       const response = await axios.post(
-        "http://localhost:8080/api/v1/users/getUserConnectionStatus",
+        `${process.env.NEXT_PUBLIC_API_URL}/api/v1/users/getUserConnectionStatus`,
         { encryptedUserId: suggestion.user_id },
         { withCredentials: true }
       );

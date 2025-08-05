@@ -2,7 +2,7 @@ import { Router } from "express";
 import {
     aboutUser, alluserInfo, isloggedin, loginUser, logoutUser, registerUser, verifyEmail,
     sendConnectionRequest, getUserConnectionStatus, AcceptOrRejectConnection, showNotifications,
-    RemoveOrWithdrawConnection, toggleReadStatus, getNewNotificationCount
+    RemoveOrWithdrawConnection, toggleReadStatus, getNewNotificationCount, updateProfile
 } from "../controllers/user.controller.js";
 import upload from "../middleware/multer.middleware.js";
 import { verifyJWT } from "../middleware/auth.middleware.js";
@@ -69,6 +69,12 @@ router.route("/toggleStatus").patch(
 router.route("/getNewNotificationCount").get(
     verifyJWT,
     getNewNotificationCount
+)
+
+router.route("/updateProfile").patch(
+    verifyJWT,
+    upload.single("avatar"),
+    updateProfile
 )
 
 export default router

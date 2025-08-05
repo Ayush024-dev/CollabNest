@@ -1,6 +1,6 @@
 import nodemailer from "nodemailer"
 import User from "../models/user.model.js"
-import bcrypt from "bcrypt"
+import bcrypt from "bcryptjs"
 import { ApiError } from "./ApiError.js"
 
 export const sendEmail= async({email, emailType, userId})=>{

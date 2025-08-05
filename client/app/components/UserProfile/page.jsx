@@ -17,6 +17,9 @@ import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
 import DialogActions from '@mui/material/DialogActions';
+import UpdateProfile from './UpdateProfile/page';
+
+
 
 const ProfilePage = () => {
   const [user, getUser] = useState({});
@@ -33,7 +36,7 @@ const ProfilePage = () => {
   const [connectionStatus, getConnectionStatus] = useState("");
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
   const [loadingLogout, setLoadingLogout] = useState(false);
-
+  const [openUpdateProfile, setOpenUpdateProfile] = useState(false);
   const router = useRouter();
 
   const getUserFeeds = async ({ userId }) => {
@@ -41,7 +44,7 @@ const ProfilePage = () => {
       setLoading(true);
       setError("");
       console.log(userId)
-      const response = await axios.post("http://localhost:8080/api/v1/posts/view_content", { encryptedId: userId }, {
+      const response = await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/posts/view_content`, { encryptedId: userId }, {
         withCredentials: true,
       });
       const data = response?.data?.data;
@@ -77,7 +80,7 @@ const ProfilePage = () => {
           await getUserFeeds({ userId: decodedId });
 
           const getStatus = await axios.post(
-            "http://localhost:8080/api/v1/users/getUserConnectionStatus",
+            `${process.env.NEXT_PUBLIC_API_URL}/api/v1/users/getUserConnectionStatus`,
             { encryptedUserId: decodedId },
             { withCredentials: true }
           );
@@ -102,6 +105,14 @@ const ProfilePage = () => {
     const userName = (user && user.name) || 'CollabNest - Profile';
     document.title = userName;
   }, [user]);
+
+  const OpenUpdateProfile = () => {
+    setOpenUpdateProfile(true);
+  }
+
+  const closeUpdateProfile = () => {
+    setOpenUpdateProfile(false);
+  }
 
 
   const handleShowAlert = (message) => {
@@ -128,7 +139,7 @@ const ProfilePage = () => {
   const handleConnect = async ({ userId }) => {
     try {
       const response = await axios.post(
-        "http://localhost:8080/api/v1/users/sendConnectionReq",
+        `${process.env.NEXT_PUBLIC_API_URL}/api/v1/users/sendConnectionReq`,
         { decryptedreceiverId: userId },  // userId should already be decrypted in the backend
         { withCredentials: true }
       );
@@ -146,7 +157,7 @@ const ProfilePage = () => {
   const handleRemoveOrWithdraw = async ({ userId }) => {
     try {
       const response = await axios.post(
-        "http://localhost:8080/api/v1/users/RemoveOrWithdrawRequest",
+        `${process.env.NEXT_PUBLIC_API_URL}/api/v1/users/RemoveOrWithdrawRequest`,
         { encryptedUserId: userId },
         { withCredentials: true }
       );
@@ -182,7 +193,7 @@ const ProfilePage = () => {
     setShowLogoutDialog(false);
     setLoadingLogout(true);
     try {
-      await axios.post('http://localhost:8080/api/v1/users/logOut', {}, { withCredentials: true });
+      await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/users/logOut`, {}, { withCredentials: true });
       localStorage.removeItem('user');
       setMsg('logout successful');
       setTimeout(() => {
@@ -337,6 +348,7 @@ const ProfilePage = () => {
                 <div className="btn flex justify-end">
                   {loggedIn && <button
                     className='font-bold text-sm px-6 py-3 rounded-2xl shadow-md bg-green-500 text-black hover:bg-green-600 transition-colors'
+                    onClick={OpenUpdateProfile}
                   >
                     Update
                   </button>}
@@ -398,6 +410,20 @@ const ProfilePage = () => {
           </div>
         </div>
       </div>
+
+      {/* Update Profile Modal */}
+      {openUpdateProfile && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
+          <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <UpdateProfile
+              user={user}
+              onShowMsg={handleShowAlert}
+              onShowError={handleErrorAlert}
+              onClose={closeUpdateProfile}
+            />
+          </div>
+        </div>
+      )}
     </div>
   )
 }

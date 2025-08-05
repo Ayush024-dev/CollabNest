@@ -50,7 +50,7 @@ const Posts = ({ users, OpenCommentSection, Feed, likedMap, fromProfile, onShowE
     const getFeeds = async () => {
         try {
 
-            const response = await axios.get("http://localhost:8080/api/v1/posts/view_content", {
+            const response = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/posts/view_content`, {
                 withCredentials: true,
             });
             const data = response?.data?.data;

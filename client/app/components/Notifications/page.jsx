@@ -1,3 +1,4 @@
+"use client"
 import React, { useState, useEffect } from "react"
 import axios from "axios";
 import { ChevronUp, ChevronDown, X, UserPlus, MessageCircle, UserCheck, ChevronLeft, ChevronRight } from "lucide-react"
@@ -15,7 +16,7 @@ const Notification = ({ users, onShowError, decrementNotificationCount, notifica
 
   const notifications = async () => {
     try {
-      const response = await axios.get("http://localhost:8080/api/v1/users/showNotification", { withCredentials: true });
+      const response = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/users/showNotification`, { withCredentials: true });
       console.log(response.data);
 
       const currNotification = response.data.data;
@@ -38,7 +39,7 @@ const Notification = ({ users, onShowError, decrementNotificationCount, notifica
   const handleRead = async (notif) => {
     try {
       await axios.patch(
-        "http://localhost:8080/api/v1/users/toggleStatus",
+        `${process.env.NEXT_PUBLIC_API_URL}/api/v1/users/toggleStatus`,
         { notification_id: notif._id },
         { withCredentials: true }
       );
@@ -53,7 +54,7 @@ const Notification = ({ users, onShowError, decrementNotificationCount, notifica
   const handleDecision = async ({ encryptedId, type, notification_id }) => {
     try {
       const setdecison = await axios.post(
-        "http://localhost:8080/api/v1/users/AcceptOrRejectConnectionRequest",
+        `${process.env.NEXT_PUBLIC_API_URL}/api/v1/users/AcceptOrRejectConnectionRequest`,
         { encryptedId: encryptedId, type: type },
         { withCredentials: true }
       );

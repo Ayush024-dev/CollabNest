@@ -1,4 +1,4 @@
-'use client'
+"use client"
 import axios from 'axios';
 import React, { useState } from 'react'
 // import { Alert } from '@mui/material';
@@ -26,7 +26,7 @@ const Login = ({ onShowAlert, onShowError }) => {
     try {
       setLoading(true);
       const response = await axios.post(
-        `http://localhost:8080/api/v1/users/login`,
+        `${process.env.NEXT_PUBLIC_API_URL}/api/v1/users/login`,
         user,
         { withCredentials: true }
       );

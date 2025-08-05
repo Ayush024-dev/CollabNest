@@ -1,5 +1,5 @@
 import mongoose, {Schema} from "mongoose";
-import bcrypt from "bcrypt"
+import bcrypt from "bcryptjs"
 import jwt from "jsonwebtoken"
 
 const userSchema= new Schema({
@@ -33,7 +33,7 @@ const userSchema= new Schema({
     password: {
         type: String,
         required: [true, "Please provide a password"],
-        unique: true
+
     },
     avatar:{
         type: String,
@@ -65,21 +65,21 @@ const userSchema= new Schema({
     isComplete: { type: Boolean, default: false },
     Bio:String,
 
-    Presence: {
-        type: Number,
-        default : 0
-    },
-    Concepts: {
-        type: Number,
-        default: 0
-    },
+    // Presence: {
+    //     type: Number,
+    //     default : 0
+    // },
+    // Concepts: {
+    //     type: Number,
+    //     default: 0
+    // },
     connections: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
     forgotPasswordToken: String,
     forgotPasswordTokenExpiry: Date,
     verifyToken: String,
     verifyTokenExpiry: Date,
     AccessToken: String,
-    lastSeen: { type: Date, default: new Date() }
+    lastSeen: { type: Date, default: () => new Date() }
 
 })
 

@@ -26,7 +26,7 @@ const WritingTab = ({ type, onShowMsg, onShowError }) => {
             post.image.forEach((file) => {
                 formdata.append("image", file);
             });
-            const response = await axios.post("http://localhost:8080/api/v1/posts/posting_content", formdata, { withCredentials: true }, {
+            const response = await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/posts/posting_content`, formdata, { withCredentials: true }, {
                 headers: {
                     "Content-Type": "multipart/form-data",
                 }

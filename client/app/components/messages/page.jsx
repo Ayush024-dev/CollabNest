@@ -1,5 +1,5 @@
 "use client"
-import React, { useState, useEffect, useRef } from "react"
+import React, { useState, useEffect, useRef, Suspense } from "react"
 import LeftPanel from "./leftpanel/page"
 import RightPanel from "./rightPanel/page"
 import axios from "axios";
@@ -9,7 +9,7 @@ import socket from "@/app/lib/socket";
 import { useSearchParams } from 'next/navigation';
 import NavBar from "../nav/page";
 
-const Messages = () => {
+const MessagesContent = () => {
   const [error, setError] = useState("");
   const [users, getusers] = useState({});
   const [showId, setShowId] = useState("");
@@ -171,7 +171,7 @@ const Messages = () => {
   const fetchUsers = async () => {
     try {
       setloading(true);
-      const response = await axios.get("http://localhost:8080/api/v1/users/allUserInfo", {
+      const response = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/users/allUserInfo`, {
         withCredentials: true,
       });
       // console.log(response)
@@ -206,7 +206,7 @@ const Messages = () => {
     // Otherwise, fetch lastSeen from backend
     try {
       const response = await axios.post(
-        "http://localhost:8080/api/v1/message/GetStatus",
+        `${process.env.NEXT_PUBLIC_API_URL}/api/v1/message/GetStatus`,
         { encryptedId: userId },
         { withCredentials: true }
       );
@@ -412,5 +412,18 @@ const Messages = () => {
   )
 
 }
+
+// Main Messages component that wraps MessagesContent in Suspense
+const Messages = () => {
+  return (
+    <Suspense fallback={
+      <div className="w-full h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    }>
+      <MessagesContent />
+    </Suspense>
+  );
+};
 
 export default Messages

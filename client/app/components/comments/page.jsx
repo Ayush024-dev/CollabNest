@@ -1,4 +1,4 @@
-'use client';
+"use client"
 
 import axios from 'axios';
 import React, { useEffect, useState } from 'react';
@@ -22,7 +22,7 @@ const CommentSection = ({ postId, userId, onShowMsg, onShowError, users }) => {
 
   const postComment = async () => {
     try {
-      const response = await axios.post("http://localhost:8080/api/v1/posts/post_comment", comment, { withCredentials: true });
+      const response = await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/posts/post_comment`, comment, { withCredentials: true });
       onShowMsg(response.data.message);
       console.log("Comment posted successfully");
     } catch (error) {
@@ -33,7 +33,7 @@ const CommentSection = ({ postId, userId, onShowMsg, onShowError, users }) => {
 
   const getComments = async () => {
     try {
-      const response = await axios.post("http://localhost:8080/api/v1/posts/view_comment", { postId },{ withCredentials: true });
+      const response = await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/posts/view_comment`, { postId },{ withCredentials: true });
       const comments = response.data?.data || [];
       getSortedComments(comments.comments);
       //to stored initial liked comments
@@ -53,7 +53,7 @@ const CommentSection = ({ postId, userId, onShowMsg, onShowError, users }) => {
   const postReplies = async ({ comment_id }) => {
     try {
       // console.log("my reply: ", replies)
-      const response = await axios.post("http://localhost:8080/api/v1/posts/reply_comment", { commentId: comment_id, reply: replies }, { withCredentials: true });
+      const response = await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/posts/reply_comment`, { commentId: comment_id, reply: replies }, { withCredentials: true });
 
       onShowMsg(response.data.message)
 

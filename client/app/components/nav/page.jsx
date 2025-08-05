@@ -1,3 +1,4 @@
+"use client"
 import React, { useEffect, useState } from 'react'
 import { Menu, X, User, MessageCircle, Info, Newspaper } from 'lucide-react'
 import axios from 'axios'
@@ -13,7 +14,7 @@ const NavBar = ({ profileLink }) => {
 
   const check = async () => {
     try {
-      const data = await axios.get("http://localhost:8080/api/v1/users/isLoggedIn", { withCredentials: true });
+      const data = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/users/isLoggedIn`, { withCredentials: true });
       
       console.log(data);
       if (data.data.message == true) {

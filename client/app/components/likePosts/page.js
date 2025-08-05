@@ -1,9 +1,10 @@
+"use client"
 import axios from 'axios';
 
-export const LikePosts = async ({ postId, setLiked, setError }) => {
+export const LikePosts = async ({ postId, setLiked, onShowError }) => {
   try {
     const response = await axios.patch(
-      "http://localhost:8080/api/v1/posts/like_content",
+      `${process.env.NEXT_PUBLIC_API_URL}/api/v1/posts/like_content`,
       { postId },
       { withCredentials: true }
     );
@@ -23,13 +24,13 @@ export const LikePosts = async ({ postId, setLiked, setError }) => {
     
   } catch (error) {
     console.log(error);
-    setError(error.response?.data || "An error occurred while liking the post.");
+    onShowError(error.response?.data || "An error occurred while liking the post.");
   }
 };
 
 export const likeComments = async({ commentId, setLiked, onShowError})=>{
   try {
-      await axios.patch("http://localhost:8080/api/v1/posts/like_comment", { commentId }, { withCredentials: true });
+      await axios.patch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/posts/like_comment`, { commentId }, { withCredentials: true });
 
       setLiked((prevLiked) => {
         const updatedLiked = new Map(prevLiked);
@@ -51,7 +52,7 @@ export const likeComments = async({ commentId, setLiked, onShowError})=>{
 
 export const likeReplies = async({ replyId, commentId, setLikedReply, onShowError})=>{
   try {
-      await axios.patch("http://localhost:8080/api/v1/posts/like_reply", { replyId, commentId }, { withCredentials: true });
+      await axios.patch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/posts/like_reply`, { replyId, commentId }, { withCredentials: true });
 
       setLikedReply((prevLiked) => {
         const updatedLiked = new Map(prevLiked);

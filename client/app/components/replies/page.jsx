@@ -1,4 +1,4 @@
-'use client'
+"use client"
 import React, { useState } from "react"
 
 
@@ -11,7 +11,7 @@ const Reply = ({ commentId, ReplyMsg, ReplyError }) => {
     const postReplies = async ({ comment_id }) => {
         try {
           // console.log("my reply: ", replies)
-          const response = await axios.post("http://localhost:8080/api/v1/posts/reply_comment", replies, { withCredentials: true });
+          const response = await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/posts/reply_comment`, replies, { withCredentials: true });
     
           ReplyMsg(response.data.message)
     

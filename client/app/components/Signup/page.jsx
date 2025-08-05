@@ -32,7 +32,7 @@ const Signup = ({ onShowAlert, onShowError, closeSignup }) => {
       formdata.append("password", user.password);
       formdata.append("confirm_password", user.confirm_password)
 
-      const response = await axios.post(`http://localhost:8080/api/v1/users/register`, formdata,
+      const response = await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/users/register`, formdata,
         {
           headers: {
             "Content-Type": "multipart/form-data",
