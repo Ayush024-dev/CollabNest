@@ -90,7 +90,7 @@ io.on("connection", (socket) => {
                     }
                 }
             } catch (error) {
-                // console.log(error);
+                console.log(error);
             }
         }
     });
@@ -128,7 +128,7 @@ io.on("connection", (socket) => {
                     });
                 }
             } catch (e) {
-                // console.log(e);
+                console.log(e);
             }
         }
     });
@@ -252,4 +252,4 @@ app.use("/api/v1/posts", postRouter);
 app.use("/api/v1/message", messageRoutes);
 
 
-export { server };
+export { server, app };

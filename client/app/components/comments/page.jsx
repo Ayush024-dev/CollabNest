@@ -11,7 +11,7 @@ import socket from '@/app/lib/socket';
 import { likeComments } from '../likePosts/page';
 import { likeReplies } from '../likePosts/page';
 
-const CommentSection = ({ postId, userId, onShowMsg, onShowError, users }) => {
+const CommentSection = ({ postId, userId, onShowMsg, onShowError, users, focusedCommentId, focusedReplyId }) => {
   const [comment, setcomment] = useState({ postId, comment: "" });
   const [sortedComments, getSortedComments] = useState([]);
   const [liked, setLiked] = useState(new Map());
@@ -25,6 +25,10 @@ const CommentSection = ({ postId, userId, onShowMsg, onShowError, users }) => {
       const response = await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/posts/post_comment`, comment, { withCredentials: true });
       onShowMsg(response.data.message);
       console.log("Comment posted successfully");
+      
+      // Clear the comment input after successful submission
+      setcomment({ postId, comment: "" });
+      
     } catch (error) {
       console.error("Error posting comment:", error);
       onShowError("Failed to post comment. Please try again.");
@@ -46,6 +50,29 @@ const CommentSection = ({ postId, userId, onShowMsg, onShowError, users }) => {
     }
   };
 
+  // Auto-open a specific comment's reply window and highlight a specific reply when requested
+  useEffect(() => {
+    if (!focusedCommentId) return;
+    const hasComment = sortedComments.some(c => c._id === focusedCommentId);
+    if (!hasComment) return;
+    // Open the reply window for the focused comment
+    setOpenReplies(prev => ({ ...prev, [focusedCommentId]: true }));
+
+    // If a replyId is provided, scroll to and highlight it after render
+    const timeout = setTimeout(() => {
+      if (focusedReplyId) {
+        const el = document.getElementById(`reply-${focusedReplyId}`);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          el.classList.add('highlight-reply');
+          setTimeout(() => el.classList.remove('highlight-reply'), 1500);
+        }
+      }
+    }, 200);
+
+    return () => clearTimeout(timeout);
+  }, [sortedComments, focusedCommentId, focusedReplyId]);
+
   const likeComment = async ({ commentId }) => {
     await likeComments({ commentId, setLiked, onShowError })
   }
@@ -56,6 +83,9 @@ const CommentSection = ({ postId, userId, onShowMsg, onShowError, users }) => {
       const response = await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/posts/reply_comment`, { commentId: comment_id, reply: replies }, { withCredentials: true });
 
       onShowMsg(response.data.message)
+      
+      // Clear the reply input after successful submission
+      setreplies("");
 
     } catch (error) {
       console.log("Failed to post replies: ", error);
@@ -238,7 +268,7 @@ const CommentSection = ({ postId, userId, onShowMsg, onShowError, users }) => {
 
                   <div className="reply_content flex-1 overflow-y-auto p-4 space-y-4">
                     {Object.values(cmt.replies).map((rpy) => (
-                      <div key={rpy._id} className='bg-lightBlue rounded-lg p-4 transition-all hover:shadow-md'>
+                      <div key={rpy._id} id={`reply-${rpy._id}`} className='bg-lightBlue rounded-lg p-4 transition-all hover:shadow-md'>
                         <div className="flex justify-between mb-4">
                           <div className="flex items-center gap-3">
                             <div className="relative h-12 w-12 rounded-full overflow-hidden">

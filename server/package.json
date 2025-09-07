@@ -5,7 +5,7 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "jest --watchAll --detectOpenHandles",
     "start": "nodemon index.js"
   },
   "author": "",
@@ -28,6 +28,12 @@
     "socket.io": "^4.8.1"
   },
   "devDependencies": {
-    "nodemon": "^3.1.7"
+    "@babel/core": "^7.28.3",
+    "@babel/preset-env": "^7.28.3",
+    "babel-jest": "^30.1.1",
+    "jest": "^30.1.1",
+    "mongodb-memory-server": "^10.2.0",
+    "nodemon": "^3.1.7",
+    "supertest": "^7.1.4"
   }
 }

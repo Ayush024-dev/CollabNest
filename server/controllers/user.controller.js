@@ -1,5 +1,4 @@
 import User from "../models/user.model.js";
-import Post from "../models/post.model.js"
 import ConnectionRequest from "../models/connectionReq.model.js";
 import Notification from "../models/notification.model.js";
 
@@ -34,7 +33,7 @@ const registerUser = AsyncHandler(async (req, res) => {
     try {
         const { name, email, password, confirm_password } = req.body;
 
-        console.log(req.body);
+        // console.log(req.body);
 
 
         if (
@@ -43,9 +42,11 @@ const registerUser = AsyncHandler(async (req, res) => {
             throw new ApiError(400, "All fields are required")
         }
 
-        const existedUser = await User.findOne({ email });
-
-        if (existedUser) throw new ApiError(409, "User already exists");
+        const existedUser = await User.findOne({ email: email.toLowerCase() });
+        console.log("existedUser", existedUser);
+        if (existedUser) {
+            throw new ApiError(409, "User already exists");
+        }
 
         if (password != confirm_password) throw new ApiError(409, "Passwords don't match");
 
@@ -59,13 +60,7 @@ const registerUser = AsyncHandler(async (req, res) => {
             avatar = await uploadOnCloudinary(avatarLocalPath);
         }
 
-
-
         // console.log(avatar);
-
-
-
-
         const user = await User.create({
             name,
             email,
@@ -75,11 +70,13 @@ const registerUser = AsyncHandler(async (req, res) => {
 
         // console.log(user);
 
-        try {
-            await fs.unlink(avatarLocalPath);
-            console.log("Local file removed successfully.");
-        } catch (unlinkError) {
-            console.error("Failed to delete local file:", unlinkError);
+        if (req.file) {
+            try {
+                await fs.unlink(avatarLocalPath);
+                console.log("Local file removed successfully.");
+            } catch (unlinkError) {
+                console.error("Failed to delete local file:", unlinkError);
+            }
         }
 
         await sendEmail({ email, emailType: "VERIFY", userId: user._id })
@@ -92,8 +89,9 @@ const registerUser = AsyncHandler(async (req, res) => {
         )
 
     } catch (error) {
-        console.log(error);
-        throw new ApiError(500, error.message);
+        console.log("register Error", error?.message || "Could not register user");
+        // throw new ApiError(error?.statusCode, error?.message || "Could not register user");
+        res.status(error?.statusCode).json({ message: error?.message || "Could not register user" });
     }
 })
 
@@ -140,6 +138,48 @@ const verifyEmail = AsyncHandler(async (req, res) => {
     }
 
 
+})
+
+const forgetPassword = AsyncHandler(async (req, res) => {
+    try {
+        const { email } = req.body;
+
+        if (!email) throw new ApiError(404, "Email is required");
+
+        const user = await User.findOne({ email });
+
+        await sendEmail({ email, emailType: "FORGOT_PASSWORD", userId: user._id })
+
+        return res.status(200).json(new ApiResponse(200, {}, "Password reset link sent to your email"));
+
+    } catch (error) {
+        console.log(error);
+        throw new ApiError(500, error.message);
+    }
+})
+
+const resetPassword = AsyncHandler(async (req, res) => {
+    try {
+        const { token, password } = req.body;
+
+        if (!token || !password) throw new ApiError(404, "All fields are required");
+
+        const user = await User.findOne({ forgotPasswordToken: token, forgotPasswordTokenExpiry: { $gt: Date.now() } });
+
+        if (!user) throw new ApiError(404, "Invalid or expired token");
+
+        user.password = password;
+        user.forgotPasswordToken = undefined;
+        user.forgotPasswordTokenExpiry = undefined;
+
+        await user.save();
+
+        return res.status(200).json(new ApiResponse(200, {}, "Password reset successfully"));
+
+    } catch (error) {
+        console.log(error);
+        throw new ApiError(500, error.message);
+    }
 })
 
 const loginUser = AsyncHandler(async (req, res) => {
@@ -330,45 +370,45 @@ const alluserInfo = AsyncHandler(async (req, res) => {
     }
 });
 
-const updateProfile= AsyncHandler(async (req, res)=>{
+const updateProfile = AsyncHandler(async (req, res) => {
     try {
-        const {name, username, email, highlights, designation, institute, Bio}= req.body;
+        const { name, username, email, highlights, designation, institute, Bio } = req.body;
 
-        const user= await User.findById(req.userId);
+        const user = await User.findById(req.userId);
 
-        if(!user) throw new ApiError(404, "User not found");
+        if (!user) throw new ApiError(404, "User not found");
 
         let avatarLocalPath;
         let avatar;
-        if(req.file){
-            
-            if(user.avatar){
-                const fileUrl= user.avatar
+        if (req.file) {
+
+            if (user.avatar) {
+                const fileUrl = user.avatar
                 const urlParts = fileUrl.split("/");
                 try {
-                    const uploadIndex= urlParts.findIndex(part=> part==="upload");
-                    if(uploadIndex!==-1 && urlParts.length>uploadIndex+1){
-                        const publicIdWithExt= urlParts.slice(uploadIndex+1).join("/");
-                        const lastDot= publicIdWithExt.lastIndexOf(".");
-                        const publicId= lastDot!==-1? publicIdWithExt.substring(0, lastDot): publicIdWithExt;
+                    const uploadIndex = urlParts.findIndex(part => part === "upload");
+                    if (uploadIndex !== -1 && urlParts.length > uploadIndex + 1) {
+                        const publicIdWithExt = urlParts.slice(uploadIndex + 1).join("/");
+                        const lastDot = publicIdWithExt.lastIndexOf(".");
+                        const publicId = lastDot !== -1 ? publicIdWithExt.substring(0, lastDot) : publicIdWithExt;
                         await delete_from_cloudinary(publicId);
                     }
                 } catch (error) {
                     console.error("Failed to extract public_id or delete from Cloudinary:", error);
                 }
             }
-            avatarLocalPath= req.file.path;
-            avatar= await uploadOnCloudinary(avatarLocalPath);
+            avatarLocalPath = req.file.path;
+            avatar = await uploadOnCloudinary(avatarLocalPath);
         }
 
-        user.name= name;
-        user.username= username;
-        user.email= email;
-        user.highlights= highlights;
-        user.designation= designation;
-        user.institute= institute;
-        user.Bio= Bio;
-        user.avatar= avatar?.url || user.avatar;
+        user.name = name;
+        user.username = username;
+        user.email = email;
+        user.highlights = highlights;
+        user.designation = designation;
+        user.institute = institute;
+        user.Bio = Bio;
+        user.avatar = avatar?.url || user.avatar;
 
         try {
             await fs.unlink(avatarLocalPath);
@@ -378,7 +418,7 @@ const updateProfile= AsyncHandler(async (req, res)=>{
         }
         await user.save();
 
-        return res.status(200).json({message: "Profile updated successfully", user});
+        return res.status(200).json({ message: "Profile updated successfully", user });
     } catch (error) {
         console.log(error);
         throw new ApiError(500, error?.message || "Cannot update profile");
@@ -400,6 +440,38 @@ const sendConnectionRequest = AsyncHandler(async (req, res) => {
         const existingUser = await ConnectionRequest.findOne({ sender: senderId, receiver: receiverId })
 
         if (existingUser) throw new ApiError(401, "Connection request already sent!!")
+
+        const RequestPresent = await ConnectionRequest.findOne({ sender: receiverId, receiver: senderId });
+
+        if (RequestPresent) {
+
+            await User.findByIdAndUpdate(receiverId, {
+                $addToSet: { connections: senderId },
+            });
+
+
+            await User.findByIdAndUpdate(senderId, {
+                $addToSet: { connections: receiverId },
+            });
+
+            const notification = await Notification.create({
+                user: receiverId,
+                from: senderId,
+                type: 'connection_accepted'
+            });
+
+            const encryptedNotification = {
+                ...notification.toObject(),
+                user: encrypt(notification.user.toString()),
+                from: encrypt(notification.from.toString()),
+            };
+
+            await ConnectionRequest.findOneAndDelete({ sender: receiverId, receiver: senderId });
+
+            return res.json(
+                new ApiResponse(200, encryptedNotification, "Connection Request already Present, hencing accepting it")
+            )
+        }
 
         const loggedinUser = await User.findById(senderId).select('connections');
 
@@ -551,29 +623,29 @@ const getUserConnectionStatus = AsyncHandler(async (req, res) => {
 
 const showNotifications = AsyncHandler(async (req, res) => {
     try {
-      const myId = req.userId;
-  
-      let notifications = await Notification.find({ user: myId });
-  
-      notifications.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-  
-      // Encrypt user and from fields for each notification
-      const encryptedNotifications = notifications.map((notif) => ({
-        ...notif.toObject(),
-        user: encrypt(notif.user.toString()),
-        from: encrypt(notif.from.toString()),
-      }));
-  
-      return res.json(
-        new ApiResponse(200, encryptedNotifications, "Notifications fetched successfully")
-      );
-  
+        const myId = req.userId;
+
+        let notifications = await Notification.find({ user: myId });
+
+        notifications.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+        // Encrypt user and from fields for each notification
+        const encryptedNotifications = notifications.map((notif) => ({
+            ...notif.toObject(),
+            user: encrypt(notif.user.toString()),
+            from: encrypt(notif.from.toString()),
+        }));
+
+        return res.json(
+            new ApiResponse(200, encryptedNotifications, "Notifications fetched successfully")
+        );
+
     } catch (error) {
-      console.log(error);
-      throw new ApiError(500, error?.message || "Not able to show notifications!!");
+        console.log(error);
+        throw new ApiError(500, error?.message || "Not able to show notifications!!");
     }
-  });
-  
+});
+
 
 const toggleReadStatus = AsyncHandler(async (req, res) => {
     try {
@@ -582,7 +654,7 @@ const toggleReadStatus = AsyncHandler(async (req, res) => {
         const updateNotification = await Notification.findByIdAndUpdate(
             notification_id,
             { $set: { read: true } },
-            { new: true } 
+            { new: true }
         );
 
         if (!updateNotification) {
@@ -598,7 +670,7 @@ const toggleReadStatus = AsyncHandler(async (req, res) => {
 
 const RemoveOrWithdrawConnection = AsyncHandler(async (req, res) => {
     try {
-        
+
 
         const { encryptedUserId } = req.body;
         const myId = req.userId;
@@ -609,10 +681,10 @@ const RemoveOrWithdrawConnection = AsyncHandler(async (req, res) => {
 
         const request = await ConnectionRequest.findOneAndDelete({ sender: myId, receiver: receiverId });
 
-        if (request){
-            const notification=await Notification.findOneAndDelete({ user: receiverId, from: myId})
+        if (request) {
+            const notification = await Notification.findOneAndDelete({ user: receiverId, from: myId })
 
-            if(!notification) throw new ApiError(401, "Notification not registered");
+            if (!notification) throw new ApiError(401, "Notification not registered");
 
 
             res.status(200).json({ message: "Request withdrawn successfully" });
@@ -661,13 +733,23 @@ const getNewNotificationCount = AsyncHandler(async (req, res) => {
 });
 
 export {
+    // Auth
     registerUser,
     verifyEmail,
     loginUser,
     logoutUser,
+    forgetPassword,
+    resetPassword,
+
+    // User
+    alluserInfo,
+    updateProfile,
+
+    // Profile
     aboutUser,
     isloggedin,
-    alluserInfo,
+
+    // Connection Request and Notification
     sendConnectionRequest,
     getUserConnectionStatus,
     AcceptOrRejectConnection,
@@ -675,5 +757,4 @@ export {
     RemoveOrWithdrawConnection,
     toggleReadStatus,
     getNewNotificationCount,
-    updateProfile
 }

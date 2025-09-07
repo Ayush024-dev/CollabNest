@@ -1,10 +1,12 @@
 "use client"
 import React, { useState, useEffect } from "react"
 import axios from "axios";
-import { ChevronUp, ChevronDown, X, UserPlus, MessageCircle, UserCheck, ChevronLeft, ChevronRight } from "lucide-react"
+import { ChevronUp, ChevronDown, X, UserPlus, MessageCircle, UserCheck, ChevronLeft, ChevronRight, MessageCircleReply } from "lucide-react"
 import socket from '@/app/lib/socket';
+import { handleClientScriptLoad } from "next/script";
+import { handler } from "tailwindcss-animate";
 
-const Notification = ({ users, onShowError, decrementNotificationCount, notificationCount, setNotificationCount }) => {
+const Notification = ({ users, onShowError, decrementNotificationCount, notificationCount, setNotificationCount, onShowReply }) => {
   const [notRead, getNotRead] = useState([]);
   const [Read, getRead] = useState([]);
   const [showPrevious, setShowPrevious] = useState(false);
@@ -79,6 +81,8 @@ const Notification = ({ users, onShowError, decrementNotificationCount, notifica
         return <UserCheck className="w-4 h-4 text-green-400" />;
       case "message":
         return <MessageCircle className="w-4 h-4 text-purple-400" />;
+      case "reply":
+        return <MessageCircleReply className="w-4 h-4 text-blue-400" />;
       default:
         return <UserPlus className="w-4 h-4 text-blue-400" />;
     }
@@ -92,6 +96,8 @@ const Notification = ({ users, onShowError, decrementNotificationCount, notifica
         return `${sender?.name || 'Someone'} accepted your connection request`;
       case "message":
         return `${sender?.name || 'Someone'} sent you a message`;
+      case "reply":
+        return `${sender?.name || 'Someone'} replied to your comment`;
       default:
         return `${sender?.name || 'Someone'} sent you a notification`;
     }
@@ -194,6 +200,12 @@ const Notification = ({ users, onShowError, decrementNotificationCount, notifica
                 >
                   Reject
                 </button>
+                <button
+                  className="px-4 py-2 text-sm bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
+                  onClick={() => handleRead(notif)}
+                >
+                  Ignore
+                </button>
               </div>
             )}
 
@@ -229,8 +241,37 @@ const Notification = ({ users, onShowError, decrementNotificationCount, notifica
               </div>
             )}
 
+            {/* Reply deeplink and Read button for reply notifications */}
+            {!isRead && notif.type === "reply" && (notif.postId && notif.commentId) && (
+              <div className="flex items-start gap-3 mt-3">
+                <button
+                  className="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+                  onClick={() => {
+                    try {
+                      // postId/commentId/replyId are provided by backend payload
+                      if (typeof onShowReply === 'function') {
+                        onShowReply({ postId: notif.postId, commentId: notif.commentId, replyId: notif.replyId });
+                      }
+                      handleRead(notif);
+                    } catch (e) {}
+                    // do not auto mark as read here; let user decide
+                    handleRead(notif);
+                    console.log(e);
+                  }}
+                >
+                  Show Reply
+                </button>
+                <button
+                  className="px-4 py-2 text-sm bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
+                  onClick={() => handleRead(notif)}
+                >
+                  Mark as Read
+                </button>
+              </div>
+            )}
+
             {/* Read button for other notifications */}
-            {!isRead && notif.type !== "connection_req" && notif.type !== "message" && (
+            {!isRead && notif.type !== "connection_req" && notif.type !== "message" && notif.type !== "reply" && (
               <button
                 className="px-4 py-2 text-sm bg-green-600 hover:bg-green-700 text-white rounded-lg mt-3 transition-colors"
                 onClick={() => handleRead(notif)}

@@ -10,6 +10,7 @@ import LinkedInIcon from '@mui/icons-material/LinkedIn';
 import { useRouter } from 'next/navigation';
 import LoadingPage from '../loading/page';
 import socket from '@/app/lib/socket';
+import ForgetPassword from '../ForgetPassword/page';
 const Login = ({ onShowAlert, onShowError }) => {
   const [user, setUser] = useState({
     email: "",
@@ -20,6 +21,7 @@ const Login = ({ onShowAlert, onShowError }) => {
   // const [msg, setMsg] = useState("");
   // const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showForgetPassword, setShowForgetPassword] = useState(false);
   const router = useRouter();
 
   const onLogin = async () => {
@@ -76,102 +78,118 @@ const Login = ({ onShowAlert, onShowError }) => {
       onShowError(errorMessage);
     }
   };
-
   return (
     <>
       {loading && <LoadingPage message="Logging you in..." />}
-      <div className='bg-black h-auto w-2/5 p-4 rounded-md'>
-      {/* {msg.length > 0 ? (
-        <>
-          <Alert icon={<CheckBoxIcon fontSize="inherit" />} severity="success">
-            {msg}
-          </Alert>
-        </>
-      ) : (
-        <></>
+             {showForgetPassword ? (
+         <ForgetPassword 
+           onShowAlert={onShowAlert} 
+           onShowError={onShowError} 
+           setShowForgetPassword={setShowForgetPassword}
+         />
+       ) : (
+        <div className='bg-black h-auto w-2/5 p-4 rounded-md'>
+          {/* {msg.length > 0 ? (
+            <>
+              <Alert icon={<CheckBoxIcon fontSize="inherit" />} severity="success">
+                {msg}
+              </Alert>
+            </>
+          ) : (
+            <></>
+          )}
+
+          {error.length > 0 ? (
+            <>
+              <Alert icon={<CheckBoxIcon fontSize="inherit" />} severity="error">
+                {error}
+              </Alert>
+            </>
+          ) : (
+            <></>
+          )} */}
+
+          <div className="nav h-auto w-full flex justify-between font-inconsolata">
+            <div className="title">
+              <p className="text-2xl">Welcome to ...</p>
+              <h1 className="text-6xl text-yellow">
+                <span className="text-blue-900">Collab</span>Nest
+              </h1>
+            </div>
+            <div className="icon">
+              <Image
+                src="/assets/icons/icon.svg"
+                width={76}
+                height={76}
+                alt='icon'
+              />
+            </div>
+          </div>
+
+          <div className="form flex justify-between w-full flex-grow">
+
+            <div className="written_form h-full flex flex-col mt-10 gap-6">
+
+
+              <Input
+                placeholder='Email or Username...'
+                id='email'
+                type='text'
+                value={user.email}
+                onChange={(e) => setUser({ ...user, email: e.target.value })}
+                variant='solid'
+                className='w-full'
+
+              />
+
+              <Input
+                placeholder='Password...'
+                id='password'
+                type='password'
+                value={user.password}
+                onChange={(e) => setUser({ ...user, password: e.target.value })}
+                variant='solid'
+                className='w-full'
+
+              />
+
+              {loading ? <Button color="success" loading variant="solid" className='w-2/5 flex justify-center text-center'>
+                Solid
+              </Button>
+                : <Button color='success' onClick={onLogin} className='w-2/5 flex justify-center text-center' >Log in</Button>
+              }
+
+              <div className="flex justify-center mt-2">
+                <button
+                  onClick={() => setShowForgetPassword(true)}
+                  className="text-blue-400 hover:text-blue-300 text-sm underline"
+                >
+                  Forgot Password?
+                </button>
+              </div>
+            </div>
+
+            <div className="or flex flex-col justify-center items-center">
+              <span className='w-0.5 h-28 bg-white'></span>
+              or
+              <span className='w-0.5 h-28 bg-white'></span>
+            </div>
+
+            <div className="google ml-6 bg-black flex flex-col justify-center items-center gap-6">
+              <div className="google w-56 h-10 bg-slate-500 rounded-lg flex justify-center items-center">
+                <GoogleIcon />
+                Sign in with Google
+              </div>
+
+              <div className="linkedin w-56  h-10 bg-slate-500 rounded-lg flex justify-center items-center">
+                <LinkedInIcon />
+                Sign in with Linkedin
+              </div>
+            </div>
+
+          </div>
+        </div>
       )}
-
-      {error.length > 0 ? (
-        <>
-          <Alert icon={<CheckBoxIcon fontSize="inherit" />} severity="error">
-            {error}
-          </Alert>
-        </>
-      ) : (
-        <></>
-      )} */}
-
-      <div className="nav h-auto w-full flex justify-between font-inconsolata">
-        <div className="title">
-          <p className="text-2xl">Welcome to ...</p>
-          <h1 className="text-6xl text-yellow">
-            <span className="text-blue-900">Collab</span>Nest
-          </h1>
-        </div>
-        <div className="icon">
-          <Image
-            src="/assets/icons/icon.svg"
-            width={76}
-            height={76}
-            alt='icon'
-          />
-        </div>
-      </div>
-
-      <div className="form flex justify-between w-full flex-grow">
-
-        <div className="written_form h-full flex flex-col mt-10 gap-6">
-
-
-          <Input
-            placeholder='Email or Username...'
-            id='email'
-            type='text'
-            value={user.email}
-            onChange={(e) => setUser({ ...user, email: e.target.value })}
-            variant='solid'
-            className='w-full'
-
-          />
-
-          <Input
-            placeholder='Password...'
-            id='password'
-            type='password'
-            value={user.password}
-            onChange={(e) => setUser({ ...user, password: e.target.value })}
-            variant='solid'
-            className='w-full'
-
-          />
-
-          {loading ? <Button color="success" loading variant="solid" className='w-2/5 flex justify-center text-center'>
-            Solid
-          </Button>
-            : <Button color='success' onClick={onLogin} className='w-2/5 flex justify-center text-center' >Log in</Button>
-          }
-        </div>
-
-        <div className="or flex flex-col justify-center items-center">
-          <span className='w-0.5 h-28 bg-white'></span>
-          or
-          <span className='w-0.5 h-28 bg-white'></span>
-        </div>
-
-        <div className="google ml-6 bg-black flex flex-col justify-center items-center gap-6">
-          <div className="google w-56 h-10 bg-slate-500 rounded-lg flex justify-center items-center">
-            <GoogleIcon />
-            Sign in with Google
-          </div>
-
-          <div className="linkedin w-56  h-10 bg-slate-500 rounded-lg flex justify-center items-center">
-            <LinkedInIcon />
-            Sign in with Linkedin
-          </div>
-        </div>
-
-      </div>
-    </div>
     </>
   )
 }

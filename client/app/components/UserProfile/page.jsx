@@ -1,5 +1,5 @@
 "use client"
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import CommentSection from '../comments/page';
 import NavBar from '../nav/page';
 import Image from 'next/image';
@@ -11,7 +11,7 @@ import ErrorIcon from "@mui/icons-material/Error";
 import CancelIcon from '@mui/icons-material/Cancel';
 import { Alert } from "@mui/material";
 import Posts from '../Posts/page';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import LoadingPage from '../loading/page';
 import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
@@ -21,7 +21,7 @@ import UpdateProfile from './UpdateProfile/page';
 
 
 
-const ProfilePage = () => {
+const ProfilePageContent = () => {
   const [user, getUser] = useState({});
   const [feeds, getFeed] = useState([]);
   const [liked, setLiked] = useState(new Map());
@@ -38,6 +38,7 @@ const ProfilePage = () => {
   const [loadingLogout, setLoadingLogout] = useState(false);
   const [openUpdateProfile, setOpenUpdateProfile] = useState(false);
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   const getUserFeeds = async ({ userId }) => {
     try {
@@ -99,7 +100,7 @@ const ProfilePage = () => {
       }
     };
     initialize();
-  }, []);
+  }, [searchParams]); // Use searchParams to detect URL changes
 
   useEffect(() => {
     const userName = (user && user.name) || 'CollabNest - Profile';
@@ -212,6 +213,7 @@ const ProfilePage = () => {
 
 
   return (
+    
     <div className='min-h-screen w-full flex flex-col bg-slate-600 relative'>
       {/* {console.log(user)} */}
       {/* {console.log(connectionStatus)} */}
@@ -428,4 +430,10 @@ const ProfilePage = () => {
   )
 }
 
-export default ProfilePage
+export default function ProfilePage() {
+  return (
+    <Suspense fallback={<LoadingPage message="Loading profile..." />}> 
+      <ProfilePageContent />
+    </Suspense>
+  );
+}

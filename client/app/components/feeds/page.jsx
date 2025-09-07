@@ -9,6 +9,7 @@ import socket from '@/app/lib/socket';
 
 // Components import
 import NavBar from '../nav/page';
+import Footer from '../Footer/page';
 import WritingTab from '../writingTab/page';
 import CommentSection from '../comments/page';
 import Posts from '../Posts/page';
@@ -44,6 +45,10 @@ const Feeds = () => {
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
   const [loadingLogout, setLoadingLogout] = useState(false);
 
+  // Deep-link to a specific reply inside a specific comment
+  const [focusedCommentId, setFocusedCommentId] = useState(null);
+  const [focusedReplyId, setFocusedReplyId] = useState(null);
+
   const router = useRouter();
 
 
@@ -68,6 +73,8 @@ const Feeds = () => {
   const closeCommentSection = () => {
     getComment(false);
     setblur(false);
+    setFocusedCommentId(null);
+    setFocusedReplyId(null);
   }
 
   const OpenNotificationWindow = () => {
@@ -78,6 +85,18 @@ const Feeds = () => {
   const closeNotificationWindow = () => {
     setOpenNotif(false);
     setblur(false);
+  }
+
+  // Open comment section and auto-open the specific reply from a notification
+  const handleShowReplyFromNotification = ({ postId: targetPostId, commentId, replyId }) => {
+    if (!targetPostId || !commentId) return;
+    setpostId(targetPostId);
+    setFocusedCommentId(commentId);
+    setFocusedReplyId(replyId || null);
+    getComment(true);
+    setblur(true);
+    // Close notifications panel if open
+    setOpenNotif(false);
   }
 
   const handleShowAlert = (message) => {
@@ -267,7 +286,7 @@ const Feeds = () => {
 
       {openNotif && (
         <div className='absolute inset-0 z-40 flex justify-center items-center'>
-          <Notification users={users} onShowError={handleErrorAlert} countofNew={setNotificationCount} decrementNotificationCount={decrementNotificationCount} notificationCount={notificationCount} setNotificationCount={setNotificationCount} />
+          <Notification users={users} onShowError={handleErrorAlert} countofNew={setNotificationCount} decrementNotificationCount={decrementNotificationCount} notificationCount={notificationCount} setNotificationCount={setNotificationCount} onShowReply={handleShowReplyFromNotification} />
         </div>
       )}
 
@@ -301,7 +320,7 @@ const Feeds = () => {
 
       {comment && (
         <div className="CS absolute inset-0 z-40 flex justify-center items-center">
-          <CommentSection postId={postId} userId={userid} onShowMsg={handleShowAlert} onShowError={handleErrorAlert} users={users} />
+          <CommentSection postId={postId} userId={userid} onShowMsg={handleShowAlert} onShowError={handleErrorAlert} users={users} focusedCommentId={focusedCommentId} focusedReplyId={focusedReplyId} />
         </div>
       )}
 
@@ -386,6 +405,7 @@ const Feeds = () => {
         {/* Right Side Panel */}
         <div className="w-32 sticky top-[64px]"></div>
       </div>
+      <Footer />
     </div>
   );
 }

@@ -14,7 +14,7 @@ export const sendEmail= async({email, emailType, userId})=>{
                 verifyToken: hashedToken,
                 verifyTokenExpiry: Date.now() + 3600000, // 1 hour expiry
             });
-        } else if (emailType === "RESET") {
+        } else if (emailType === "FORGOT_PASSWORD") {
             await User.findByIdAndUpdate(userId, {
                 forgotPasswordToken: hashedToken,
                 forgotPasswordTokenExpiry: Date.now() + 3600000, // 1 hour expiry
@@ -39,10 +39,10 @@ export const sendEmail= async({email, emailType, userId})=>{
             from: process.env.USER,
             to: email,
             subject: emailType === "VERIFY" ? "Verify your email" : "Reset your password",
-            html: `<p>Click <a href="${process.env.DOMAIN}/components/verifyemail?token=${encodedToken}">here</a> to ${
+            html: `<p>Click <a href="${process.env.DOMAIN}/components/${emailType === "VERIFY" ? "verifyemail" : "resetPassword"}?token=${encodedToken}">here</a> to ${
                 emailType === "VERIFY" ? "verify your email" : "reset your password"
             } or copy and paste the link below in your browser. <br> 
-            ${process.env.DOMAIN}/components/verifyemail?token=${encodedToken}
+            ${process.env.DOMAIN}/components/${emailType === "VERIFY" ? "verifyemail" : "resetPassword"}?token=${encodedToken}
             </p>`,
         };
 

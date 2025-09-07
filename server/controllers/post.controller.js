@@ -4,25 +4,13 @@ import Comment from "../models/comments.model.js";
 import { AsyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/ApiError.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
+import { delete_from_cloudinary } from "../utils/Delete_from_cloudinary.js";
 import fs from 'fs/promises';
 import { ApiResponse } from "../utils/ApirResponse.js";
 import { encrypt, decrypt } from "../utils/encryption.js";
+import Notification from "../models/notification.model.js";
 
 
-// const getuserinfo= async (req, res) => {
-//     try {
-//         const AccessToken= req.cookies?.accessToken || req.header("Authorization")?.replace("bearer ","");
-
-//         console.log("my token ", AccessToken)
-
-//         const user= await User.findOne({AccessToken}); 
-
-//         return res.status(200).json(user);
-//     } catch (error) {
-//         console.error(error);
-//         throw new ApiError(500, error?.message || "Cannot find user details")
-//     }
-// }
 
 const postingContent = AsyncHandler(async (req, res) => {
     try {
@@ -34,7 +22,7 @@ const postingContent = AsyncHandler(async (req, res) => {
         if (type == "ideate" && !field) throw new ApiError(401, "Please provide the field of your idea")
 
         let imageLocalpath, images = [];
-        console.log(req.files)
+        // console.log(req.files)
         if (req.files.length > 0) {
             // `req.files` is an array, so assign it directly to `imageLocalpath`
             imageLocalpath = req.files.map(file => file.path);
@@ -182,6 +170,82 @@ const showPosts = AsyncHandler(async (req, res) => {
     }
 });
 
+const updatePost = AsyncHandler(async (req, res) =>{
+    try {
+        const { postId, type, content, field, imagesToDelete = [] } = req.body;
+        
+
+        const post = await Post.findById(postId);
+        if(!post) throw new ApiError(404, "Post not found");
+        if (!type || !content) throw new ApiError(401, "Cannot Post without content or type");
+        if (type == "Ideate" && !field) throw new ApiError(401, "Please provide the field of your idea");
+
+        
+        if (Array.isArray(imagesToDelete) && imagesToDelete.length > 0) {
+            for (const url of imagesToDelete) {
+                
+                try {
+                    const matches = url.match(/\/upload\/(?:v\d+\/)?([^\.]+)(?:\.[^\/]+)?$/);
+                    const public_id = matches && matches[1] ? matches[1] : null;
+                    if (public_id) {
+                        await delete_from_cloudinary(public_id);
+                        
+                        post.image = post.image.filter(imgUrl => imgUrl !== url);
+
+                        console.log("Image deleted from cloudinary!!")
+                    }
+                } catch (err) {
+                    console.error("Failed to extract public_id or delete image:", err);
+                }
+            }
+        }
+
+        
+        let newImages = [];
+        if (req.files && req.files.length > 0) {
+            const imageLocalpath = req.files.map(file => file.path);
+            newImages = await Promise.all(imageLocalpath.map(async (localPath) => {
+                return await uploadOnCloudinary(localPath);
+            }));
+            
+            for (let i = 0; i < imageLocalpath.length; i++) {
+                try {
+                    await fs.unlink(imageLocalpath[i]);
+                } catch (unlinkError) {
+                    console.error("Failed to delete local file:", unlinkError);
+                }
+            }
+        }
+
+        
+        post.type = type;
+        post.content = content;
+        if(field) post.field = field;
+        
+        if (newImages.length > 0) {
+            post.image = post.image.concat(newImages.map(img => img.url));
+        }
+
+        await post.save();
+
+        
+        const encryptedPost = {
+            ...post.toObject(),
+            postId: encrypt(post.postId.toString()),
+        };
+
+        
+        const io = req.app.get('io');
+        io.emit('updatedPost', encryptedPost);
+
+        return res.status(200).json(
+            new ApiResponse(200, encryptedPost, "Post updated successfully!!")
+        );
+    } catch (error) {
+        console.log(error);
+        throw new ApiError(500, error?.message || "Could not update the post!!")
+    }
+})
 
 const likePosts = AsyncHandler(async (req, res) => {
     try {
@@ -401,6 +465,24 @@ const postReplies = AsyncHandler(async (req, res) => {
         const io = req.app.get('io');
         io.emit("newReply", { commentId, reply: encryptedReply });
 
+        const newNotification = await Notification.create({
+            user: comment.personId,
+            from: replyingId,
+            type: 'reply'
+        })
+
+        const encryptedNotification = {
+            ...newNotification.toObject(),
+            user: encrypt(newNotification.user.toString()),
+            from: encrypt(newNotification.from.toString()),
+            // Provide contextual identifiers for the frontend to deep-link into the UI
+            postId: comment.postId?.toString(),
+            commentId: comment._id?.toString(),
+            replyId: newReplyObj._id?.toString(),
+        };
+
+        io.to(encrypt(comment.personId.toString())).emit('newNotification', encryptedNotification);
+
         console.log("reply posted")
 
         const encryptedReplies = updatedComment.replies
@@ -528,5 +610,6 @@ export {
     likeComments,
     postReplies,
     showReplies,
-    likeReplies
+    likeReplies,
+    updatePost
 }                                      

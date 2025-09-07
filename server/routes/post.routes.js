@@ -1,20 +1,29 @@
 import { Router } from "express";
 import { verifyJWT } from "../middleware/auth.middleware.js";
-import { getsortedComments, likeComments, likePosts, likeReplies, postComments, postingContent, postReplies, showPosts, showReplies } from "../controllers/post.controller.js";
+import {
+    getsortedComments, likeComments, likePosts, likeReplies, postComments, postingContent, postReplies, showPosts,
+    showReplies, updatePost
+} from "../controllers/post.controller.js";
 import upload from "../middleware/multer.middleware.js";
 
 
-const router=Router();
+const router = Router();
 
 router.route("/posting_content").post(
-    verifyJWT, upload.array("image",3), postingContent
+    verifyJWT, upload.array("image", 3), postingContent
 )
 router.route("/view_content")
     .get(showPosts)
     .post(showPosts);
 
+router.route("/update_content").patch(
+    verifyJWT,
+    upload.array("image", 3),
+    updatePost
+)
+
 router.route("/like_content").patch(
-    verifyJWT,likePosts
+    verifyJWT, likePosts
 )
 router.route("/post_comment").post(
     verifyJWT, postComments

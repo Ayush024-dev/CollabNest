@@ -109,6 +109,29 @@ body {
   scrollbar-color: #cbd5e1 transparent;
 }
 
+/* Ensure scrollbar doesn't affect layout width */
+.custom-scrollbar {
+  box-sizing: border-box;
+}
+
+/* Ensure content width is consistent regardless of scrollbar */
+.custom-scrollbar > * {
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box;
+}
+
+/* transient highlight for a reply card */
+.highlight-reply {
+  animation: replyHighlight 1.2s ease-out;
+}
+
+@keyframes replyHighlight {
+  0% { box-shadow: 0 0 0 0 rgba(234, 179, 8, 0.9); background-color: rgba(250, 204, 21, 0.25); }
+  60% { box-shadow: 0 0 0 8px rgba(234, 179, 8, 0.0); background-color: rgba(250, 204, 21, 0.1); }
+  100% { box-shadow: none; background-color: transparent; }
+}
+
 .custom-quill-editor .ql-toolbar.ql-snow {
   background: #111;
   border: none;
