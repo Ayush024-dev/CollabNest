@@ -130,7 +130,7 @@ Create `.env` files in both `client` and `server` directories:
 
 ```bash
 # In server/.env
-PORT=5000
+PORT=8080
 MONGODB_URI=your_mongodb_connection_string
 JWT_SECRET=your_jwt_secret
 CLOUDINARY_CLOUD_NAME=your_cloudinary_name
@@ -140,7 +140,7 @@ EMAIL_USER=your_email
 EMAIL_PASS=your_email_password
 
 # In client/.env
-NEXT_PUBLIC_API_URL=http://localhost:5000
+NEXT_PUBLIC_API_URL=http://localhost:8080
 ```
 
 ### 3. Backend Setup
@@ -162,7 +162,7 @@ npm run dev
 ### 5. Access the Application
 
 - **Frontend**: http://localhost:3000
-- **Backend API**: http://localhost:5000
+- **Backend API**: http://localhost:8080
 
 ---
 
@@ -177,7 +177,7 @@ npm run dev
 ```bash
 cd server
 docker build -t collabnest-backend .
-docker run -p 5000:5000 --env-file .env collabnest-backend
+docker run -p 8080:8080 --env-file .env collabnest-backend
 ```
 
 ### Frontend Container
